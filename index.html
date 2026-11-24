@@ -1145,8 +1145,16 @@
                             <input type="date" id="m-absen-tanggal" class="form-control border-primary" required>
                         </div>
                         <div class="mb-3">
+                            <label for="m-absen-kelas" class="form-label small fw-bold">Pilih Kelas</label>
+                            <select id="m-absen-kelas" class="form-select border-primary fw-semibold" onchange="filterSiswaAbsenManual()" required>
+                                <option value="">-- Pilih Kelas --</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
                             <label for="m-absen-siswa" class="form-label small fw-bold">Pilih Siswa</label>
-                            <select id="m-absen-siswa" class="form-select border-primary" required></select>
+                            <select id="m-absen-siswa" class="form-select border-primary" disabled required>
+                                <option value="">-- Pilih Kelas Terlebih Dahulu --</option>
+                            </select>
                         </div>
                         <div class="mb-3">
                             <label for="m-absen-status" class="form-label small fw-bold">Status</label>
@@ -1248,8 +1256,8 @@
         // 1. UBAH IS_PREVIEW KE false JIKA SUDAH DI-DEPLOY KE GITHUB PAGES / BLOGGER
         // 2. TEMPEL URL WEB APP GOOGLE APPS SCRIPT (/exec) PADA GAS_API_URL
         // =========================================================================
-        const IS_PREVIEW = false // UBAH KE false JIKA SUDAH DI-DEPLOY KE GITHUB PAGES / BLOGGER
-        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbz4uvpE4ptMenS-1N54LnbGjbdqNz5PyrcfUWA3aQ0vL9MuzhCKOf62XJl7m-0HwoBd/exec";
+        const IS_PREVIEW = true; // UBAH KE false JIKA SUDAH DI-DEPLOY KE GITHUB PAGES / BLOGGER
+        const GAS_API_URL = "";
 
         // =========================================================================
         // INISIALISASI PWA (MANIFEST DINAMIS & SERVICE WORKER AMAN)
@@ -1289,8 +1297,7 @@
 
                 const manifestLink = document.getElementById('pwa-manifest');
                 if (manifestLink) {
-                    const blob = new Blob([JSON.stringify(manifestObj)], { type: 'application/manifest+json' });
-                    manifestLink.href = URL.createObjectURL(blob);
+                    manifestLink.href = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifestObj));
                 }
             } catch (e) {
                 console.warn("Gagal menyuntikkan manifest PWA:", e);
@@ -2013,22 +2020,60 @@
 
         function openModalAbsenManual() {
             document.getElementById('m-absen-tanggal').value = document.getElementById('dash-filter-tanggal').value || getTodayStr();
-            const sel = document.getElementById('m-absen-siswa');
-            sel.innerHTML = '<option value="">-- Pilih Siswa --</option>' +
-                STATE.siswa.slice().sort((a, b) => a.kelas.localeCompare(b.kelas) || a.nama.localeCompare(b.nama))
-                    .map(s => `<option value="${escapeHTML(s.id_siswa)}">[${escapeHTML(s.kelas)}] ${escapeHTML(s.nama)} (${escapeHTML(s.nis)})</option>`).join('');
+
+            // Isi dropdown kelas unik yang diurutkan alfabetis dari STATE.siswa
+            const kelasUnik = [...new Set(STATE.siswa.map(s => String(s.kelas || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+            const selKelas = document.getElementById('m-absen-kelas');
+            selKelas.innerHTML = '<option value="">-- Pilih Kelas --</option>' +
+                kelasUnik.map(k => `<option value="${escapeHTML(k)}">${escapeHTML(k)}</option>`).join('');
+
+            // Otomatis ikuti filter kelas Dashboard jika sedang aktif memilih kelas tertentu
+            const dashKelas = document.getElementById('dash-filter-kelas').value;
+            selKelas.value = (dashKelas && kelasUnik.includes(dashKelas)) ? dashKelas : '';
+
+            filterSiswaAbsenManual();
+            document.getElementById('m-absen-status').value = 'S';
             document.getElementById('m-absen-ket').value = '';
             new bootstrap.Modal(document.getElementById('modalAbsenManual')).show();
         }
 
+        /**
+         * Menyaring daftar siswa pada modal Input Manual berdasarkan kelas yang dipilih.
+         */
+        function filterSiswaAbsenManual() {
+            const kelasTerpilih = document.getElementById('m-absen-kelas').value;
+            const selSiswa = document.getElementById('m-absen-siswa');
+
+            if (!kelasTerpilih) {
+                selSiswa.disabled = true;
+                selSiswa.innerHTML = '<option value="">-- Pilih Kelas Terlebih Dahulu --</option>';
+                return;
+            }
+
+            const siswaKelas = STATE.siswa
+                .filter(s => String(s.kelas || '').trim() === kelasTerpilih)
+                .sort((a, b) => String(a.nama || '').localeCompare(String(b.nama || '')));
+
+            selSiswa.disabled = false;
+            if (siswaKelas.length === 0) {
+                selSiswa.innerHTML = '<option value="">-- Tidak ada siswa di kelas ini --</option>';
+            } else {
+                selSiswa.innerHTML = `<option value="">-- Pilih Siswa (${siswaKelas.length} siswa) --</option>` +
+                    siswaKelas.map(s => `<option value="${escapeHTML(s.id_siswa)}">${escapeHTML(s.nama)} (${escapeHTML(s.nis)})</option>`).join('');
+            }
+        }
+
         function simpanAbsenManual() {
+            const kelas = document.getElementById('m-absen-kelas').value;
             const payload = {
                 tanggal: document.getElementById('m-absen-tanggal').value,
                 id_siswa: document.getElementById('m-absen-siswa').value,
                 status: document.getElementById('m-absen-status').value,
                 keterangan: document.getElementById('m-absen-ket').value.trim()
             };
-            if (!payload.tanggal || !payload.id_siswa) return customAlert("Pilih tanggal dan siswa terlebih dahulu.");
+            if (!payload.tanggal) return customAlert("Pilih tanggal terlebih dahulu.");
+            if (!kelas) return customAlert("Pilih kelas terlebih dahulu.");
+            if (!payload.id_siswa) return customAlert("Pilih siswa terlebih dahulu.");
 
             callBackend('simpanAbsenManual_server', [JSON.stringify(payload)], (res) => {
                 if (res && res.success) {
@@ -3345,7 +3390,7 @@
                     modeBadge.className = 'badge bg-warning bg-opacity-25 text-dark border border-warning rounded-pill px-3 py-1';
                     modeBadge.innerHTML = '<i class="fas fa-flask me-1"></i> Mode Preview (Dummy)';
                 }
-            } else {
+            } else if (GAS_API_URL) {
                 if (modeBadge) {
                     modeBadge.className = 'badge bg-primary bg-opacity-10 text-primary border border-primary rounded-pill px-3 py-1';
                     modeBadge.innerHTML = '<i class="fas fa-cloud me-1"></i> Terhubung ke GAS API';
