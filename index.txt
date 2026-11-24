@@ -1,0 +1,2845 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Absensi Kelas Pro - Presensi QR Gerbang</title>
+    <meta name="theme-color" content="#0d6efd">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="AbsensiQR">
+    <link id="pwa-manifest" rel="manifest" href="">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
+
+    <!-- CDN Libraries -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --bg-color: #f4f6f9;
+            --sidebar-width: 245px;
+        }
+        * { box-sizing: border-box; }
+        body {
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            padding-bottom: 75px;
+            color: #212529;
+            overflow-x: hidden;
+        }
+        .hidden { display: none !important; }
+
+        /* App Bar */
+        .app-bar {
+            background-color: var(--primary-color);
+            color: #fff;
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 16px;
+            min-height: 56px;
+        }
+
+        /* Bottom Navigation (Mobile) & Sidebar (Desktop) */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #fff;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            overflow-x: auto;
+            white-space: nowrap;
+            padding: 6px 0;
+            z-index: 1015;
+        }
+        .bottom-nav::-webkit-scrollbar { height: 0; }
+        .nav-item {
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.72rem;
+            flex: 1 0 auto;
+            min-width: 68px;
+            cursor: pointer;
+            padding: 6px 6px;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .nav-item i { display: block; font-size: 1.15rem; margin-bottom: 2px; }
+        .nav-item.active { color: var(--primary-color); font-weight: 700; }
+
+        @media (min-width: 992px) {
+            body { padding-left: var(--sidebar-width); padding-bottom: 20px; }
+            body.kiosk-mode { padding-left: 0 !important; }
+            body.kiosk-mode .bottom-nav { display: none !important; }
+            .bottom-nav {
+                top: 56px;
+                left: 0;
+                width: var(--sidebar-width);
+                height: calc(100vh - 56px);
+                flex-direction: column;
+                justify-content: flex-start;
+                overflow-y: auto;
+                box-shadow: 2px 0 6px rgba(0,0,0,0.08);
+                padding: 12px 0;
+            }
+            .nav-item {
+                padding: 14px 22px;
+                text-align: left;
+                display: flex;
+                align-items: center;
+                border-bottom: 1px solid #f0f0f0;
+                font-size: 0.92rem;
+            }
+            .nav-item i { margin-right: 14px; margin-bottom: 0; font-size: 1.15rem; width: 22px; text-align: center; }
+            .nav-item.active { background-color: #eef5ff; border-left: 4px solid var(--primary-color); }
+        }
+        body.kiosk-mode .bottom-nav { display: none !important; }
+
+        /* Login Page */
+        #page-login {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #e8f1ff 0%, #f8f9fa 100%);
+            z-index: 9999;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        /* Cards & Stats */
+        .card-custom {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            padding: 18px;
+            margin-bottom: 18px;
+            border: 1px solid #edf0f5;
+        }
+        .stat-card {
+            border-radius: 12px;
+            color: #fff;
+            padding: 16px 12px;
+            text-align: center;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+            height: 100%;
+        }
+        .bg-orange { background-color: #fd7e14 !important; }
+        .bg-purple { background-color: #6f42c1 !important; }
+        .text-orange { color: #fd7e14 !important; }
+        .text-purple { color: #6f42c1 !important; }
+
+        /* Area Kamera Laptop & Smartphone */
+        #qr-reader-wrapper {
+            position: relative;
+            width: 100%;
+            min-height: 280px;
+            background: #111;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #qr-reader {
+            width: 100%;
+            border: none !important;
+        }
+        #qr-reader video {
+            width: 100% !important;
+            height: auto !important;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+        #qr-reader-wrapper.mirror-active video {
+            transform: scaleX(-1);
+            -webkit-transform: scaleX(-1);
+        }
+        #qr-placeholder-box {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.8);
+            background: #1a1e24;
+            padding: 20px;
+            text-align: center;
+            z-index: 5;
+        }
+
+        /* Scan Result Display Card */
+        .scan-display-card {
+            border-radius: 14px;
+            border: 3px solid #dee2e6;
+            background: #fff;
+            transition: all 0.25s ease;
+            min-height: 360px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .scan-display-card.state-hadir { border-color: #198754; background: #f2fbf6; }
+        .scan-display-card.state-terlambat { border-color: #fd7e14; background: #fff8f0; }
+        .scan-display-card.state-ijin { border-color: #0d6efd; background: #f0f6ff; }
+        .scan-display-card.state-pulang { border-color: #198754; background: #edfaf2; }
+        .scan-display-card.state-error { border-color: #dc3545; background: #fff2f3; }
+        .scan-display-card.state-warning { border-color: #ffc107; background: #fffdf0; }
+
+        .student-identity-table th {
+            width: 36%;
+            color: #5c6670;
+            font-weight: 600;
+            font-size: 0.95rem;
+            padding: 8px 6px;
+            border-bottom: 1px dashed #dce1e7;
+        }
+        .student-identity-table td {
+            font-weight: 700;
+            font-size: 1.12rem;
+            color: #1a1e24;
+            padding: 8px 6px;
+            border-bottom: 1px dashed #dce1e7;
+        }
+        .clock-live {
+            font-family: 'Courier New', monospace;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        /* Loader & Custom Dialog Overlay */
+        #loader {
+            position: fixed;
+            inset: 0;
+            background: rgba(255,255,255,0.85);
+            z-index: 12000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-custom-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.55);
+            z-index: 11500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        #pwa-install-banner {
+            background: #e7f1ff;
+            border: 1px solid #b6d4fe;
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-bottom: 14px;
+        }
+
+        /* Print Container (Laporan & Kartu QR Massal) */
+        #print-container-global { display: none; }
+        @media print {
+            body { padding: 0 !important; margin: 0 !important; background: #fff !important; }
+            #main-app, #page-login, #loader, .modal, .modal-backdrop, .modal-custom-overlay { display: none !important; }
+            #print-container-global { display: block !important; width: 100%; }
+            .qr-card-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 12px;
+            }
+            .qr-id-card {
+                border: 2px solid #0d6efd;
+                border-radius: 8px;
+                padding: 10px;
+                text-align: center;
+                page-break-inside: avoid;
+                background: #fff;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Global Loader -->
+    <div id="loader" class="hidden">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
+        <div class="mt-3 fw-bold text-primary" id="loader-text">Memproses Data...</div>
+    </div>
+
+    <!-- Container Tersembunyi Khusus Scan File Foto QR -->
+    <div id="qr-file-temp-reader" class="d-none"></div>
+
+    <!-- ========================================================================= -->
+    <!-- HALAMAN LOGIN                                                             -->
+    <!-- ========================================================================= -->
+    <div id="page-login">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-12 col-sm-9 col-md-6 col-lg-4">
+                    <div class="card card-custom shadow-lg border-0 p-4 text-center">
+                        <div class="mb-2 text-primary">
+                            <i class="fas fa-qrcode fa-3x"></i>
+                        </div>
+                        <h3 class="fw-bold text-primary mb-1">Absensi Kelas Pro</h3>
+                        <div class="d-flex flex-wrap justify-content-center gap-1 mb-3">
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3 py-1">
+                                Edisi Sekolah &bull; QR Gerbang
+                            </span>
+                            <span id="login-mode-badge" class="badge bg-info bg-opacity-10 text-primary border border-primary rounded-pill px-3 py-1">
+                                <i class="fas fa-server me-1"></i> Standalone PWA
+                            </span>
+                        </div>
+
+                        <div id="preview-badge-login" class="alert alert-warning py-2 px-3 small text-start mb-3 hidden">
+                            <strong><i class="fas fa-flask me-1"></i> Mode Preview Aktif (Data Dummy):</strong><br>
+                            Admin: <code>admin</code> / <code>edudigital</code><br>
+                            Petugas: <code>peserta</code> / <code>edudigital</code>
+                        </div>
+
+                        <form id="form-login" onsubmit="event.preventDefault(); handleLogin();">
+                            <div class="mb-3 text-start">
+                                <label for="login-username" class="form-label fw-bold small">Username</label>
+                                <input type="text" id="login-username" class="form-control border-primary" placeholder="Masukkan username..." required autocomplete="username">
+                            </div>
+                            <div class="mb-3 text-start">
+                                <label for="login-password" class="form-label fw-bold small">Password</label>
+                                <div class="input-group">
+                                    <input type="password" id="login-password" class="form-control border-primary" placeholder="Masukkan password..." required autocomplete="current-password">
+                                    <button class="btn btn-outline-secondary border-primary bg-white" type="button" onclick="togglePasswordVisibility('login-password', 'icon-eye-login')" aria-label="Tampilkan Password">
+                                        <i class="fas fa-eye" id="icon-eye-login"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 fw-bold py-2 shadow-sm">
+                                <i class="fas fa-sign-in-alt me-1"></i> Masuk Aplikasi
+                            </button>
+                        </form>
+                        <div class="mt-4 text-muted small">
+                            &copy; 2026 Sistem Presensi QR Gerbang Sekolah
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- APLIKASI UTAMA                                                            -->
+    <!-- ========================================================================= -->
+    <div id="main-app" class="hidden">
+        <!-- App Bar -->
+        <div class="app-bar">
+            <div class="d-flex align-items-center gap-2">
+                <h5 class="m-0 fw-bold" id="app-title">Dashboard</h5>
+                <span id="badge-role-aktif" class="badge bg-danger border border-light" style="font-size: 0.7rem;">Role: Admin</span>
+                <span id="badge-koneksi" class="badge bg-success d-none d-sm-inline-block" style="font-size: 0.68rem;">
+                    <i class="fas fa-wifi me-1"></i> Online
+                </span>
+            </div>
+            <div class="d-flex align-items-center gap-1">
+                <button id="install-pwa-btn" class="btn btn-sm btn-warning fw-bold hidden" onclick="installPWA()">
+                    <i class="fas fa-download me-1"></i> <span class="d-none d-sm-inline">Install</span>
+                </button>
+                <button class="btn btn-sm btn-info text-white fw-bold" onclick="openModalUbahPassword()">
+                    <i class="fas fa-key"></i> <span class="d-none d-md-inline">Ubah Password</span>
+                </button>
+                <button class="btn btn-sm btn-outline-light fw-bold" onclick="handleLogout()">
+                    <i class="fas fa-sign-out-alt"></i> <span class="d-none d-md-inline">Keluar</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Bottom Nav (Mobile) / Sidebar (Desktop) -->
+        <div class="bottom-nav">
+            <div class="nav-item active" id="nav-dashboard" onclick="navigate('dashboard')">
+                <i class="fas fa-home"></i> <span>Dashboard</span>
+            </div>
+            <div class="nav-item" id="nav-scan" onclick="navigate('scan')">
+                <i class="fas fa-qrcode"></i> <span>Scan QR</span>
+            </div>
+            <div class="nav-item" id="nav-siswa" onclick="navigate('siswa')">
+                <i class="fas fa-users"></i> <span>Siswa &amp; QR</span>
+            </div>
+            <div class="nav-item" id="nav-rekap" onclick="navigate('rekap')">
+                <i class="fas fa-table"></i> <span>Rekap</span>
+            </div>
+            <div class="nav-item admin-only" id="nav-pengaturan" onclick="navigate('pengaturan')">
+                <i class="fas fa-sliders-h"></i> <span>Pengaturan</span>
+            </div>
+        </div>
+
+        <!-- Main Container -->
+        <div class="container-fluid py-3 px-3 px-lg-4">
+            <!-- PWA Install Banner -->
+            <div id="pwa-install-banner" class="d-flex justify-content-between align-items-center gap-2 hidden">
+                <div class="small text-primary fw-semibold">
+                    <i class="fas fa-mobile-alt me-2"></i> Pasang aplikasi <strong>Absensi QR</strong> di layar utama agar dapat dibuka cepat tanpa bilah alamat browser.
+                </div>
+                <button class="btn btn-sm btn-primary fw-bold text-nowrap" onclick="installPWA()">Install PWA</button>
+            </div>
+
+            <!-- ================================================================= -->
+            <!-- 1. VIEW DASHBOARD                                                 -->
+            <!-- ================================================================= -->
+            <div id="view-dashboard">
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <div class="stat-card bg-primary">
+                            <i class="fas fa-users fa-lg opacity-75 mb-1"></i>
+                            <h2 class="fw-bold m-0" id="dash-total-siswa">0</h2>
+                            <small class="fw-semibold opacity-75">Total Siswa</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card bg-success">
+                            <i class="fas fa-school fa-lg opacity-75 mb-1"></i>
+                            <h2 class="fw-bold m-0" id="dash-total-kelas">0</h2>
+                            <small class="fw-semibold opacity-75">Total Kelas</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-4">
+                    <div class="col-4 col-md">
+                        <div class="stat-card bg-success">
+                            <h3 class="fw-bold m-0" id="dash-h">0</h3>
+                            <small>Hadir</small>
+                        </div>
+                    </div>
+                    <div class="col-4 col-md">
+                        <div class="stat-card bg-orange">
+                            <h3 class="fw-bold m-0" id="dash-t">0</h3>
+                            <small>Terlambat</small>
+                        </div>
+                    </div>
+                    <div class="col-4 col-md">
+                        <div class="stat-card bg-primary">
+                            <h3 class="fw-bold m-0" id="dash-i">0</h3>
+                            <small>Ijin</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md">
+                        <div class="stat-card bg-purple">
+                            <h3 class="fw-bold m-0" id="dash-s">0</h3>
+                            <small>Sakit</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md">
+                        <div class="stat-card bg-danger">
+                            <h3 class="fw-bold m-0" id="dash-a">0</h3>
+                            <small>Alpa</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabel Siswa Tidak Hadir / Ijin -->
+                <div class="card-custom">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+                        <h6 class="m-0 fw-bold text-dark">
+                            <i class="fas fa-user-clock text-warning me-2"></i>
+                            Daftar Siswa Ijin / Sakit / Alpa <span class="text-primary" id="dash-label-tanggal"></span>
+                        </h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            <input type="date" id="dash-filter-tanggal" class="form-control form-control-sm border-primary" style="width: auto;" onchange="loadDashboardData()">
+                            <select id="dash-filter-kelas" class="form-select form-select-sm border-primary" style="width: auto;" onchange="renderDashboardUI()">
+                                <option value="">Semua Kelas</option>
+                            </select>
+                            <button class="btn btn-sm btn-outline-primary fw-bold" onclick="openModalAbsenManual()">
+                                <i class="fas fa-plus-circle me-1"></i> Input S/I/A Manual
+                            </button>
+                            <button class="btn btn-sm btn-danger fw-bold" onclick="cetakLaporanHarianPDF()">
+                                <i class="fas fa-file-pdf me-1"></i> Cetak PDF Harian
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover table-sm align-middle text-center mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th width="5%">No</th>
+                                    <th>NIS</th>
+                                    <th class="text-start">Nama Siswa</th>
+                                    <th>L/P</th>
+                                    <th>Kelas</th>
+                                    <th>Status</th>
+                                    <th>Jam Masuk</th>
+                                    <th>Jam Keluar</th>
+                                    <th class="text-start">Keterangan / Alasan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-dash-tidak-hadir">
+                                <tr><td colspan="9" class="text-muted py-3">Memuat data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tabel Aktivitas Scan Hari Ini -->
+                <div class="card-custom border-top border-primary border-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="m-0 fw-bold text-primary">
+                            <i class="fas fa-door-open me-2"></i> Aktivitas Scan Gerbang Hari Ini
+                        </h6>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-primary fw-bold" onclick="navigate('scan')">
+                                <i class="fas fa-qrcode me-1"></i> Buka Mesin Scan
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="loadDashboardData()" title="Refresh">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered table-sm text-center align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>No</th>
+                                    <th>NIS</th>
+                                    <th class="text-start">Nama Siswa</th>
+                                    <th>L/P</th>
+                                    <th>Kelas</th>
+                                    <th>Jam Masuk</th>
+                                    <th>Jam Pulang</th>
+                                    <th>Status</th>
+                                    <th>Status Pulang</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-dash-aktivitas">
+                                <tr><td colspan="9" class="text-muted py-3">Belum ada aktivitas scan hari ini.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================================================================= -->
+            <!-- 2. VIEW SCAN QR (WEBCAM LAPTOP, KAMERA HP, FOTO QR & USB SCANNER) -->
+            <!-- ================================================================= -->
+            <div id="view-scan" class="hidden">
+                <!-- Header Info Sekolah & Jam Live -->
+                <div class="card-custom py-2 px-3 mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2 border-start border-primary border-4">
+                    <div>
+                        <span class="fw-bold text-primary"><i class="fas fa-school me-1"></i> <span id="scan-nama-sekolah">SMA Negeri 8 Depok</span></span>
+                        <div class="small text-muted">
+                            Batas Masuk: <strong class="text-dark" id="info-jam-masuk">07:15</strong> &bull;
+                            Jam Pulang: <strong class="text-dark" id="info-jam-pulang">14:05</strong> &bull;
+                            Cooldown: <strong class="text-dark" id="info-cooldown">5</strong> mnt
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="bg-dark text-white px-3 py-1 rounded clock-live fs-5" id="jam-digital-gerbang">00:00:00</div>
+                        <button class="btn btn-sm btn-outline-dark fw-bold" id="btn-kiosk-toggle" onclick="toggleKioskMode()">
+                            <i class="fas fa-expand me-1"></i> Mode Gerbang
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Panel Simulasi Waktu (Hanya Tampil di Mode Preview) -->
+                <div id="preview-simulasi-panel" class="alert alert-info py-2 px-3 mb-3 hidden">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div class="small">
+                            <strong><i class="fas fa-vial me-1"></i> Simulasi Waktu Preview:</strong> Uji skenario datang tepat waktu, telat, izin tengah jalan, dan pulang normal.
+                        </div>
+                        <div class="d-flex flex-wrap gap-1 align-items-center">
+                            <select id="simulasi-jam-select" class="form-select form-select-sm border-info fw-bold" style="width: auto;">
+                                <option value="REAL">Waktu Nyata Perangkat</option>
+                                <option value="07:05:00">07:05 (Masuk Tepat Waktu)</option>
+                                <option value="07:25:00">07:25 (Masuk Terlambat)</option>
+                                <option value="10:30:00">10:30 (Ijin Pulang Tengah Jalan)</option>
+                                <option value="14:15:00">14:15 (Pulang Normal &gt;= 14:05)</option>
+                            </select>
+                            <button class="btn btn-sm btn-primary fw-bold" onclick="triggerDemoScan('2601001')">Test: Ahmad (2601001)</button>
+                            <button class="btn btn-sm btn-success fw-bold" onclick="triggerDemoScan('2601002')">Test: Siti (2601002)</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <!-- Panel Kiri: Pemindai Kamera, Foto QR & USB Scanner -->
+                    <div class="col-12 col-lg-5">
+                        <div class="card-custom h-100 mb-0">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-1 mb-2">
+                                <h6 class="fw-bold text-primary m-0"><i class="fas fa-camera me-1"></i> Pemindai QR</h6>
+                                <div class="d-flex flex-wrap gap-1">
+                                    <button class="btn btn-sm btn-outline-secondary fw-bold" id="btn-mirror-cam" onclick="toggleMirrorCamera()" title="Balik Tampilan Horizontal">
+                                        <i class="fas fa-arrows-alt-h"></i> Cermin
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-primary fw-bold" id="btn-scan-file" onclick="triggerQRFileUpload()" title="Pindai dari Foto / Kamera Sistem">
+                                        <i class="fas fa-image me-1"></i> Scan Foto QR
+                                    </button>
+                                    <button class="btn btn-sm btn-success fw-bold" id="btn-start-cam" onclick="startQRScanner()">
+                                        <i class="fas fa-play me-1"></i> Mulai Kamera
+                                    </button>
+                                    <button class="btn btn-sm btn-danger fw-bold hidden" id="btn-stop-cam" onclick="stopQRScanner()">
+                                        <i class="fas fa-stop me-1"></i> Stop
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Input File Cadangan untuk Scan Foto QR -->
+                            <input type="file" id="input-qr-file" accept="image/*" capture="environment" class="d-none" onchange="handleQRFileScan(event)">
+
+                            <!-- Pilihan Perangkat Kamera + Tombol Deteksi Manual (User Gesture) -->
+                            <div class="mb-2">
+                                <label for="select-camera-device" class="form-label small fw-semibold text-muted mb-1">Perangkat Kamera:</label>
+                                <div class="input-group input-group-sm">
+                                    <select id="select-camera-device" class="form-select border-primary fw-bold" onchange="switchCameraDevice()">
+                                        <option value="">Klik "Mulai Kamera" atau Deteksi...</option>
+                                    </select>
+                                    <button class="btn btn-outline-primary fw-bold" type="button" id="btn-refresh-cam" onclick="loadAvailableLaptopCameras(true)" title="Deteksi Ulang Perangkat Kamera">
+                                        <i class="fas fa-sync-alt me-1"></i> Deteksi
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Area Video Live Kamera -->
+                            <div id="qr-reader-wrapper" class="mb-3">
+                                <div id="qr-placeholder-box">
+                                    <i class="fas fa-video fa-3x mb-2 opacity-50"></i>
+                                    <span class="fw-bold small">Kamera Belum Aktif</span>
+                                    <span class="small opacity-75 mt-1">Klik <strong>Mulai Kamera</strong> untuk menyalakan webcam/HP, atau gunakan <strong>Scan Foto QR</strong>.</span>
+                                </div>
+                                <div id="qr-reader"></div>
+                            </div>
+
+                            <!-- Input USB Barcode Scanner / Ketik Manual -->
+                            <div class="bg-light p-3 rounded border border-primary">
+                                <label for="input-usb-qr" class="form-label small fw-bold text-primary mb-1">
+                                    <i class="fas fa-barcode me-1"></i> Input USB Scanner / Ketik NIS Manual
+                                </label>
+                                <form onsubmit="event.preventDefault(); submitManualQR();">
+                                    <div class="input-group">
+                                        <input type="text" id="input-usb-qr" class="form-control fw-bold border-primary" placeholder="Arahkan kursor &amp; scan..." autocomplete="off">
+                                        <button class="btn btn-primary fw-bold" type="submit"><i class="fas fa-check me-1"></i> Proses</button>
+                                    </div>
+                                </form>
+                                <small class="text-muted d-block mt-1" style="font-size: 0.74rem;">
+                                    USB Barcode Scanner otomatis mengisi dan menekan Enter.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panel Kanan: Display Identitas & Status Hasil Scan -->
+                    <div class="col-12 col-lg-7">
+                        <div id="scan-display-card" class="scan-display-card p-4 shadow-sm h-100">
+                            <div id="scan-standby" class="text-center py-4">
+                                <i class="fas fa-id-card fa-4x text-primary opacity-50 mb-3"></i>
+                                <h4 class="fw-bold text-dark">Siap Memindai QR Code Siswa</h4>
+                                <p class="text-muted mb-0">
+                                    Arahkan Kartu QR Code siswa ke kamera laptop/HP atau tembak dengan USB Scanner.<br>
+                                    Identitas lengkap (NIS, Nama, Jenis Kelamin, Kelas) akan tampil otomatis di layar ini.
+                                </p>
+                            </div>
+
+                            <div id="scan-result-content" class="hidden">
+                                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                                    <div>
+                                        <span id="res-status-badge" class="badge fs-5 px-3 py-2 shadow-sm">HADIR</span>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="small text-muted">Waktu Scan</div>
+                                        <div class="fw-bold fs-5 clock-live text-dark" id="res-jam-scan">07:05:12</div>
+                                    </div>
+                                </div>
+
+                                <div class="alert py-2 px-3 fw-semibold mb-3" id="res-pesan-banner"></div>
+
+                                <div class="d-flex flex-column flex-sm-row align-items-center gap-3">
+                                    <div class="rounded-circle bg-primary bg-opacity-10 border border-primary d-flex align-items-center justify-content-center flex-shrink-0" style="width: 96px; height: 96px;">
+                                        <i class="fas fa-user-graduate fa-3x text-primary" id="res-avatar-icon"></i>
+                                    </div>
+                                    <div class="w-100">
+                                        <table class="table table-borderless student-identity-table mb-0">
+                                            <tr>
+                                                <th>NIS</th>
+                                                <td><span class="badge bg-dark fs-6 px-3" id="res-nis">-</span></td>
+                                            </tr>
+                                            <tr>
+                                                <th>Nama Siswa</th>
+                                                <td class="text-primary" id="res-nama">-</td>
+                                            </tr>
+                                            <tr>
+                                                <th>Jenis Kelamin</th>
+                                                <td id="res-jk">-</td>
+                                            </tr>
+                                            <tr>
+                                                <th>Kelas</th>
+                                                <td><span class="badge bg-primary fs-6 px-3" id="res-kelas">-</span></td>
+                                            </tr>
+                                            <tr>
+                                                <th>Jam Masuk / Pulang</th>
+                                                <td class="fs-6" id="res-jam-detail">-</td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabel 10 Riwayat Scan Terakhir -->
+                <div class="card-custom mt-3">
+                    <h6 class="fw-bold text-dark mb-2"><i class="fas fa-history text-primary me-2"></i> 10 Riwayat Scan Terakhir Hari Ini</h6>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm text-center align-middle mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>NIS</th>
+                                    <th class="text-start">Nama Siswa</th>
+                                    <th>L/P</th>
+                                    <th>Kelas</th>
+                                    <th>Masuk</th>
+                                    <th>Pulang</th>
+                                    <th>Status</th>
+                                    <th class="text-start">Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-scan-recent">
+                                <tr><td colspan="8" class="text-muted py-3">Belum ada data scan hari ini.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================================================================= -->
+            <!-- 3. VIEW SISWA & KARTU QR                                          -->
+            <!-- ================================================================= -->
+            <div id="view-siswa" class="hidden">
+                <div class="card-custom">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <h5 class="fw-bold text-primary m-0"><i class="fas fa-users me-2"></i> Manajemen Siswa &amp; Kartu QR Code</h5>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button class="btn btn-sm btn-dark fw-bold" onclick="cetakKartuQRMassal()">
+                                <i class="fas fa-id-card me-1"></i> Cetak Kartu QR (Filter Aktif)
+                            </button>
+                            <button class="btn btn-sm btn-primary fw-bold admin-only" onclick="openModalSiswa()">
+                                <i class="fas fa-plus me-1"></i> Tambah Siswa
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-12 col-md-4">
+                            <select id="siswa-filter-kelas" class="form-select border-primary" onchange="renderTableSiswa()">
+                                <option value="">Semua Kelas</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-5">
+                            <input type="text" id="siswa-search" class="form-control border-primary" placeholder="Cari NIS atau Nama Siswa..." oninput="renderTableSiswa()">
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped table-hover align-middle text-center mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th width="5%">No</th>
+                                    <th>NIS (Kode QR)</th>
+                                    <th class="text-start">Nama Siswa</th>
+                                    <th>Jenis Kelamin</th>
+                                    <th>Kelas</th>
+                                    <th>Kartu QR</th>
+                                    <th class="admin-only">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-siswa">
+                                <tr><td colspan="7" class="text-muted py-3">Memuat data siswa...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================================================================= -->
+            <!-- 4. VIEW REKAP PRESENSI                                            -->
+            <!-- ================================================================= -->
+            <div id="view-rekap" class="hidden">
+                <div class="card-custom">
+                    <h5 class="fw-bold text-primary mb-3"><i class="fas fa-table me-2"></i> Rekapitulasi Presensi QR Gerbang</h5>
+                    <div class="row g-2 align-items-end mb-3 bg-light p-3 rounded border">
+                        <div class="col-6 col-md-3">
+                            <label for="rekap-filter-bulan" class="form-label small fw-bold">Bulan</label>
+                            <select id="rekap-filter-bulan" class="form-select form-select-sm border-primary">
+                                <option value="all">Semua Bulan</option>
+                                <option value="01">Januari</option>
+                                <option value="02">Februari</option>
+                                <option value="03">Maret</option>
+                                <option value="04">April</option>
+                                <option value="05">Mei</option>
+                                <option value="06">Juni</option>
+                                <option value="07">Juli</option>
+                                <option value="08">Agustus</option>
+                                <option value="09">September</option>
+                                <option value="10">Oktober</option>
+                                <option value="11">November</option>
+                                <option value="12">Desember</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label for="rekap-filter-kelas" class="form-label small fw-bold">Kelas</label>
+                            <select id="rekap-filter-kelas" class="form-select form-select-sm border-primary">
+                                <option value="">Semua Kelas</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6 d-flex gap-2">
+                            <button class="btn btn-sm btn-primary fw-bold flex-fill" onclick="loadRekapData()">
+                                <i class="fas fa-search me-1"></i> Tampilkan
+                            </button>
+                            <button class="btn btn-sm btn-success fw-bold flex-fill" onclick="exportRekapExcel()">
+                                <i class="fas fa-file-excel me-1"></i> Excel
+                            </button>
+                            <button class="btn btn-sm btn-danger fw-bold flex-fill" onclick="cetakRekapPDF()">
+                                <i class="fas fa-file-pdf me-1"></i> Cetak PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table id="tabel-rekap-qr" class="table table-bordered table-striped table-sm align-middle text-center mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>No</th>
+                                    <th>Tanggal</th>
+                                    <th>NIS</th>
+                                    <th class="text-start">Nama Siswa</th>
+                                    <th>L/P</th>
+                                    <th>Kelas</th>
+                                    <th>Jam Masuk</th>
+                                    <th>Jam Pulang</th>
+                                    <th>Status</th>
+                                    <th>Status Pulang</th>
+                                    <th class="text-start">Keterangan / Alasan Ijin</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-rekap">
+                                <tr><td colspan="11" class="text-muted py-4">Pilih filter lalu klik <strong>Tampilkan</strong>.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================================================================= -->
+            <!-- 5. VIEW PENGATURAN & AKUN (ADMIN ONLY)                            -->
+            <!-- ================================================================= -->
+            <div id="view-pengaturan" class="hidden">
+                <div class="row g-3">
+                    <div class="col-12 col-lg-5">
+                        <div class="card-custom h-100 mb-0">
+                            <h5 class="fw-bold text-primary mb-3"><i class="fas fa-clock me-2"></i> Pengaturan Jam Gerbang</h5>
+                            <form id="form-pengaturan" onsubmit="event.preventDefault(); savePengaturan();">
+                                <div class="mb-3">
+                                    <label for="set-nama-sekolah" class="form-label small fw-bold">Nama Sekolah</label>
+                                    <input type="text" id="set-nama-sekolah" class="form-control border-primary" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="set-jam-masuk" class="form-label small fw-bold">Jam Batas Masuk (Lewat = Terlambat)</label>
+                                    <input type="time" id="set-jam-masuk" class="form-control border-primary fw-bold" value="07:15" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="set-jam-pulang" class="form-label small fw-bold">Jam Pulang Sekolah (Sebelum ini = Ijin Pulang Awal)</label>
+                                    <input type="time" id="set-jam-pulang" class="form-control border-primary fw-bold" value="14:05" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="set-cooldown" class="form-label small fw-bold">Jeda Anti-Double Scan (Menit)</label>
+                                    <input type="number" id="set-cooldown" class="form-control border-primary fw-bold" min="0" max="60" value="5" required>
+                                    <small class="text-muted">Mencegah scan masuk ganda dianggap Ijin Pulang.</small>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100 fw-bold py-2">
+                                    <i class="fas fa-save me-1"></i> Simpan Pengaturan
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-lg-7">
+                        <div class="card-custom h-100 mb-0">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="fw-bold text-primary m-0"><i class="fas fa-user-shield me-2"></i> Manajemen Akun Pengguna</h5>
+                                <button class="btn btn-sm btn-primary fw-bold" onclick="openModalUser()">
+                                    <i class="fas fa-user-plus me-1"></i> Tambah Akun
+                                </button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-sm text-center align-middle mb-0">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Username</th>
+                                            <th class="text-start">Nama Lengkap</th>
+                                            <th>Role</th>
+                                            <th>Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-users">
+                                        <tr><td colspan="4" class="text-muted py-3">Memuat akun...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- KUMPULAN MODAL                                                            -->
+    <!-- ========================================================================= -->
+
+    <!-- Modal Konfirmasi Ijin Pulang Awal -->
+    <div class="modal fade" id="modalAlasanIjin" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-door-open me-2"></i> Konfirmasi Ijin Pulang Awal</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning py-2 small mb-3">
+                        <i class="fas fa-info-circle me-1"></i> Siswa memindai keluar <strong>sebelum jam pulang (<span id="ijin-jam-pulang-ref">14:05</span>)</strong>. Status presensi otomatis diubah menjadi <strong>IJIN (I)</strong>.
+                    </div>
+                    <div class="bg-light border rounded p-3 mb-3">
+                        <div class="row g-1 small">
+                            <div class="col-4 text-muted fw-semibold">NIS</div>
+                            <div class="col-8 fw-bold" id="ijin-nis">-</div>
+                            <div class="col-4 text-muted fw-semibold">Nama Siswa</div>
+                            <div class="col-8 fw-bold text-primary" id="ijin-nama">-</div>
+                            <div class="col-4 text-muted fw-semibold">Jenis Kelamin</div>
+                            <div class="col-8 fw-bold" id="ijin-jk">-</div>
+                            <div class="col-4 text-muted fw-semibold">Kelas</div>
+                            <div class="col-8 fw-bold" id="ijin-kelas">-</div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="ijin-id-absen">
+                    <label class="form-label fw-bold small">Pilihan Cepat Alasan Izin:</label>
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" onclick="pilihAlasanCepat('Sakit di UKS')">Sakit di UKS</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" onclick="pilihAlasanCepat('Urusan Keluarga')">Urusan Keluarga</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" onclick="pilihAlasanCepat('Dispensasi / Lomba')">Dispensasi / Lomba</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" onclick="pilihAlasanCepat('Keperluan Medis / Dokter')">Keperluan Medis</button>
+                    </div>
+
+                    <div class="mb-2">
+                        <label for="ijin-alasan-input" class="form-label fw-bold small">Keterangan / Alasan Tambahan <span class="text-danger">*</span></label>
+                        <textarea id="ijin-alasan-input" class="form-control border-primary" rows="2" placeholder="Ketik alasan izin siswa..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary fw-bold" onclick="batalIjinPulang()">Batal</button>
+                    <button type="button" class="btn btn-primary fw-bold" onclick="konfirmasiSimpanIjinPulang()">
+                        <i class="fas fa-check-circle me-1"></i> Simpan Status IJIN
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Tambah / Edit Siswa -->
+    <div class="modal fade" id="modalSiswa" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold" id="modalSiswaTitle">Tambah Siswa</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <form id="form-siswa" onsubmit="event.preventDefault(); simpanSiswa();">
+                    <div class="modal-body">
+                        <input type="hidden" id="f-siswa-id">
+                        <div class="mb-3">
+                            <label for="f-siswa-nis" class="form-label small fw-bold">NIS (Isi QR Code)</label>
+                            <input type="text" id="f-siswa-nis" class="form-control border-primary fw-bold" placeholder="Contoh: 2601006" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="f-siswa-nama" class="form-label small fw-bold">Nama Lengkap Siswa</label>
+                            <input type="text" id="f-siswa-nama" class="form-control border-primary" placeholder="Contoh: Budi Santoso" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="f-siswa-jk" class="form-label small fw-bold">Jenis Kelamin</label>
+                            <select id="f-siswa-jk" class="form-select border-primary" required>
+                                <option value="L">Laki-laki (L)</option>
+                                <option value="P">Perempuan (P)</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label for="f-siswa-kelas" class="form-label small fw-bold">Kelas</label>
+                            <input type="text" id="f-siswa-kelas" class="form-control border-primary" placeholder="Contoh: X-1" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-primary fw-bold">Simpan Data</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Preview Kartu QR Tunggal -->
+    <div class="modal fade" id="modalKartuQR" tabindex="-1">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-dark text-white">
+                    <h6 class="modal-title fw-bold"><i class="fas fa-qrcode me-2"></i> Kartu QR Siswa</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div id="single-qr-box" class="d-inline-block p-2 border rounded bg-white mb-2"></div>
+                    <h6 class="fw-bold text-primary mb-0" id="qr-preview-nama">-</h6>
+                    <div class="small text-muted" id="qr-preview-detail">-</div>
+                </div>
+                <div class="modal-footer bg-light justify-content-center">
+                    <button type="button" class="btn btn-sm btn-primary fw-bold" onclick="downloadSingleQR()">
+                        <i class="fas fa-download me-1"></i> Unduh QR PNG
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Input Manual (Sakit / Ijin / Alpa) -->
+    <div class="modal fade" id="modalAbsenManual" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i> Input Manual (S/I/A)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <form id="form-absen-manual" onsubmit="event.preventDefault(); simpanAbsenManual();">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="m-absen-tanggal" class="form-label small fw-bold">Tanggal</label>
+                            <input type="date" id="m-absen-tanggal" class="form-control border-primary" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="m-absen-siswa" class="form-label small fw-bold">Pilih Siswa</label>
+                            <select id="m-absen-siswa" class="form-select border-primary" required></select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="m-absen-status" class="form-label small fw-bold">Status</label>
+                            <select id="m-absen-status" class="form-select border-primary fw-bold">
+                                <option value="S">Sakit (S)</option>
+                                <option value="I">Ijin Tidak Masuk (I)</option>
+                                <option value="A">Alpa / Tanpa Keterangan (A)</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label for="m-absen-ket" class="form-label small fw-bold">Keterangan</label>
+                            <input type="text" id="m-absen-ket" class="form-control border-primary" placeholder="Contoh: Surat dokter / Konfirmasi orang tua">
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-primary fw-bold">Simpan Status</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Tambah Akun Pengguna -->
+    <div class="modal fade" id="modalUser" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold">Tambah Akun Pengguna</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <form id="form-user" onsubmit="event.preventDefault(); simpanUser();">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="f-user-username" class="form-label small fw-bold">Username</label>
+                            <input type="text" id="f-user-username" class="form-control border-primary" required autocomplete="off">
+                        </div>
+                        <div class="mb-3">
+                            <label for="f-user-password" class="form-label small fw-bold">Password</label>
+                            <input type="text" id="f-user-password" class="form-control border-primary" required autocomplete="off">
+                        </div>
+                        <div class="mb-3">
+                            <label for="f-user-nama" class="form-label small fw-bold">Nama Lengkap</label>
+                            <input type="text" id="f-user-nama" class="form-control border-primary" required>
+                        </div>
+                        <div class="mb-2">
+                            <label for="f-user-role" class="form-label small fw-bold">Role / Hak Akses</label>
+                            <select id="f-user-role" class="form-select border-primary">
+                                <option value="Admin">Admin (Akses Penuh)</option>
+                                <option value="Peserta">Peserta / Petugas Piket</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-primary fw-bold">Simpan Akun</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ubah Password (Dibungkus <form> untuk Menghilangkan Peringatan DOM Chrome) -->
+    <div class="modal fade" id="modalUbahPassword" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-key me-2"></i> Ubah Password Akun</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <form id="form-ubah-password" onsubmit="event.preventDefault(); prosesUbahPassword();">
+                    <div class="modal-body">
+                        <input type="text" id="cp-username-hidden" class="d-none" autocomplete="username" tabindex="-1" aria-hidden="true">
+                        <div class="mb-3">
+                            <label for="cp-old" class="form-label small fw-bold">Password Lama</label>
+                            <input type="password" id="cp-old" class="form-control border-info" required autocomplete="current-password">
+                        </div>
+                        <div class="mb-2">
+                            <label for="cp-new" class="form-label small fw-bold">Password Baru</label>
+                            <input type="password" id="cp-new" class="form-control border-info" required autocomplete="new-password">
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-info text-white fw-bold">Perbarui Password</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container Global untuk Cetak PDF / Kartu QR -->
+    <div id="print-container-global"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // =========================================================================
+        // KONFIGURASI APLIKASI
+        // 1. UBAH IS_PREVIEW KE false JIKA SUDAH DI-DEPLOY KE GITHUB PAGES / BLOGGER
+        // 2. TEMPEL URL WEB APP GOOGLE APPS SCRIPT (/exec) PADA GAS_API_URL
+        // =========================================================================
+        const IS_PREVIEW = true; // Set default true untuk Canvas Preview dengan Data Dummy
+        const GAS_API_URL = "PASTE_URL_WEB_APP_GAS_ANDA_DI_SINI";
+
+        // =========================================================================
+        // INISIALISASI PWA (MANIFEST DINAMIS & SERVICE WORKER AMAN)
+        // =========================================================================
+        let deferredPrompt = null;
+
+        function initPWAManifestAndSW() {
+            try {
+                const manifestObj = {
+                    name: "Absensi Kelas Pro - QR Gerbang",
+                    short_name: "AbsensiQR",
+                    description: "Aplikasi Presensi QR Code Gerbang Sekolah dengan Kamera & USB Scanner",
+                    start_url: "./",
+                    display: "standalone",
+                    background_color: "#f4f6f9",
+                    theme_color: "#0d6efd",
+                    orientation: "any",
+                    icons: [
+                        {
+                            src: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+                            sizes: "192x192",
+                            type: "image/png",
+                            purpose: "any maskable"
+                        },
+                        {
+                            src: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+                            sizes: "512x512",
+                            type: "image/png",
+                            purpose: "any maskable"
+                        }
+                    ]
+                };
+
+                const manifestLink = document.getElementById('pwa-manifest');
+                if (manifestLink) {
+                    const blob = new Blob([JSON.stringify(manifestObj)], { type: 'application/manifest+json' });
+                    manifestLink.href = URL.createObjectURL(blob);
+                }
+            } catch (e) {
+                console.warn("Gagal menyuntikkan manifest PWA:", e);
+            }
+
+            // Registrasi Service Worker aman (hanya berjalan di HTTPS / localhost)
+            try {
+                if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+                    const swCode = `
+                        const CACHE_NAME = 'absensi-qr-pro-v1';
+                        self.addEventListener('install', (event) => {
+                            self.skipWaiting();
+                        });
+                        self.addEventListener('activate', (event) => {
+                            event.waitUntil(self.clients.claim());
+                        });
+                        self.addEventListener('fetch', (event) => {
+                            if (event.request.method !== 'GET') return;
+                            event.respondWith(
+                                fetch(event.request).catch(() => caches.match(event.request))
+                            );
+                        });
+                    `;
+                    const swBlob = new Blob([swCode], { type: 'application/javascript' });
+                    const swUrl = URL.createObjectURL(swBlob);
+                    navigator.serviceWorker.register(swUrl).catch(() => {
+                        // Fallback jika browser menolak SW berbasis Blob, coba ./sw.js jika ada
+                        navigator.serviceWorker.register('./sw.js').catch(() => {});
+                    });
+                }
+            } catch (e) {
+                // Abaikan error SW di lingkungan preview/sandbox
+            }
+        }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const btn = document.getElementById('install-pwa-btn');
+            const banner = document.getElementById('pwa-install-banner');
+            if (btn) btn.classList.remove('hidden');
+            if (banner) banner.classList.remove('hidden');
+        });
+
+        function installPWA() {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choice) => {
+                if (choice.outcome === 'accepted') {
+                    document.getElementById('install-pwa-btn').classList.add('hidden');
+                    document.getElementById('pwa-install-banner').classList.add('hidden');
+                }
+                deferredPrompt = null;
+            });
+        }
+
+        function updateOnlineStatus() {
+            const badge = document.getElementById('badge-koneksi');
+            if (!badge) return;
+            if (navigator.onLine) {
+                badge.className = 'badge bg-success d-none d-sm-inline-block';
+                badge.innerHTML = '<i class="fas fa-wifi me-1"></i> Online';
+            } else {
+                badge.className = 'badge bg-danger d-none d-sm-inline-block';
+                badge.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> Offline';
+            }
+        }
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+
+        // =========================================================================
+        // HELPER WAKTU, AUDIO, DIALOG & DATABASE DUMMY (PREVIEW)
+        // =========================================================================
+        function getTodayStr() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        function getCurrentTimeStr() {
+            if (IS_PREVIEW) {
+                const sim = document.getElementById('simulasi-jam-select');
+                if (sim && sim.value !== 'REAL') return sim.value;
+            }
+            const d = new Date();
+            return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+        }
+
+        let DUMMY_DB = {
+            users: [
+                { username: "admin", password: "edudigital", role: "Admin", nama: "Administrator Sekolah" },
+                { username: "peserta", password: "edudigital", role: "Peserta", nama: "Petugas Piket Gerbang" }
+            ],
+            pengaturan: {
+                nama_sekolah: "SMA Negeri 8 Depok",
+                jam_masuk: "07:15",
+                jam_pulang: "14:05",
+                cooldown_menit: 5
+            },
+            siswa: [
+                { id_siswa: "S001", nis: "2601001", nama: "Ahmad Fauzan Pratama", jenis_kelamin: "L", kelas: "X-1" },
+                { id_siswa: "S002", nis: "2601002", nama: "Siti Rahmawati Putri", jenis_kelamin: "P", kelas: "X-1" },
+                { id_siswa: "S003", nis: "2601003", nama: "Dimas Arya Nugroho", jenis_kelamin: "L", kelas: "XI-2" },
+                { id_siswa: "S004", nis: "2601004", nama: "Nadia Kartika Sari", jenis_kelamin: "P", kelas: "XI-2" },
+                { id_siswa: "S005", nis: "2601005", nama: "Rizky Ramadhan", jenis_kelamin: "L", kelas: "XII-1" }
+            ],
+            absensi: []
+        };
+
+        let STATE = {
+            user: null,
+            siswa: [],
+            absensiHariIni: [],
+            rekapData: [],
+            pengaturan: { nama_sekolah: "SMA Negeri 8 Depok", jam_masuk: "07:15", jam_pulang: "14:05", cooldown_menit: 5 },
+            users: [],
+            activeQRCodeSiswa: null,
+            isProcessingScan: false,
+            lastScanText: "",
+            lastScanTimestamp: 0,
+            html5QrCode: null,
+            cameraRunning: false,
+            availableCameras: []
+        };
+
+        function showLoader(msg = "Memproses Data...") {
+            document.getElementById('loader-text').innerText = msg;
+            document.getElementById('loader').classList.remove('hidden');
+        }
+        function hideLoader() {
+            document.getElementById('loader').classList.add('hidden');
+        }
+
+        function escapeHTML(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function customAlert(pesan) {
+            const id = 'alert-' + Date.now() + Math.floor(Math.random() * 1000);
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = 'modal-custom-overlay';
+            div.innerHTML = `
+                <div class="bg-white p-4 rounded-3 shadow-lg text-center" style="max-width: 440px; width: 100%;">
+                    <h5 class="fw-bold text-primary mb-2"><i class="fas fa-info-circle me-1"></i> Informasi</h5>
+                    <p class="text-dark mb-4 small text-start" style="white-space: pre-wrap; max-height: 55vh; overflow-y: auto;">${escapeHTML(pesan)}</p>
+                    <button class="btn btn-primary w-100 fw-bold" onclick="document.getElementById('${id}').remove()">OK</button>
+                </div>`;
+            document.body.appendChild(div);
+        }
+
+        function customConfirm(pesan, onYes) {
+            const id = 'confirm-' + Date.now() + Math.floor(Math.random() * 1000);
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = 'modal-custom-overlay';
+            window['yes_' + id] = () => {
+                const el = document.getElementById(id);
+                if (el) el.remove();
+                delete window['yes_' + id];
+                if (onYes) onYes();
+            };
+            div.innerHTML = `
+                <div class="bg-white p-4 rounded-3 shadow-lg text-center" style="max-width: 400px; width: 100%;">
+                    <h5 class="fw-bold text-danger mb-2"><i class="fas fa-exclamation-triangle me-1"></i> Konfirmasi</h5>
+                    <p class="text-dark mb-4" style="white-space: pre-wrap;">${escapeHTML(pesan)}</p>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-secondary w-50 fw-bold" onclick="document.getElementById('${id}').remove()">Batal</button>
+                        <button class="btn btn-danger w-50 fw-bold" onclick="window['yes_${id}']()">Ya, Lanjutkan</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(div);
+        }
+
+        function playBeep(type) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                if (type === 'success') {
+                    osc.frequency.value = 880;
+                    gain.gain.setValueAtTime(0.18, ctx.currentTime);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.16);
+                } else if (type === 'warning') {
+                    osc.frequency.value = 600;
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.25);
+                } else {
+                    osc.frequency.value = 240;
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.35);
+                }
+            } catch (e) {}
+        }
+
+        function togglePasswordVisibility(inputId, iconId) {
+            const inp = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            if (inp.type === 'password') {
+                inp.type = 'text';
+                icon.className = 'fas fa-eye-slash text-danger';
+            } else {
+                inp.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        }
+
+        function timeToMinutes(timeStr) {
+            if (!timeStr) return 0;
+            const parts = String(timeStr).split(':');
+            return parseInt(parts[0] || 0, 10) * 60 + parseInt(parts[1] || 0, 10);
+        }
+
+        // =========================================================================
+        // KOMUNIKASI BACKEND (PREVIEW DUMMY / FETCH GAS API JSON / FALLBACK GAS)
+        // =========================================================================
+        async function callBackend(funcName, argsArray, onSuccess, customMsg) {
+            if (customMsg !== false) showLoader(customMsg || "Memproses Data...");
+
+            // 1. Mode Preview (Data Dummy)
+            if (IS_PREVIEW) {
+                setTimeout(() => {
+                    hideLoader();
+                    const res = handleDummyBackend(funcName, argsArray);
+                    if (onSuccess) onSuccess(res);
+                }, 180);
+                return;
+            }
+
+            // 2. Mode Standalone Opsi A: Fetch JSON ke Google Apps Script Web App (doPost)
+            // Menggunakan text/plain;charset=utf-8 agar tidak memicu CORS preflight OPTIONS
+            if (GAS_API_URL && GAS_API_URL.startsWith('https://script.google.com/macros/s/')) {
+                try {
+                    const response = await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        redirect: 'follow',
+                        headers: {
+                            'Content-Type': 'text/plain;charset=utf-8'
+                        },
+                        body: JSON.stringify({
+                            action: funcName,
+                            args: argsArray || []
+                        })
+                    });
+
+                    const rawText = await response.text();
+                    let json;
+                    try {
+                        json = JSON.parse(rawText);
+                    } catch (parseErr) {
+                        throw new Error("Respons server bukan JSON valid. Pastikan fungsi doPost(e) sudah terpasang dan di-deploy sebagai 'Siapa saja' (Anyone).");
+                    }
+
+                    hideLoader();
+                    if (json && json.ok === true) {
+                        if (onSuccess) onSuccess(json.data);
+                    } else {
+                        customAlert("Error Server:\n" + (json && json.error ? json.error : "Permintaan gagal diproses oleh server GAS."));
+                    }
+                } catch (err) {
+                    hideLoader();
+                    customAlert("Gagal menghubungi Server GAS API:\n" + (err && err.message ? err.message : String(err)));
+                }
+                return;
+            }
+
+            // 3. Fallback jika dijalankan langsung di dalam container Google Apps Script
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler((res) => {
+                        hideLoader();
+                        if (onSuccess) onSuccess(res);
+                    })
+                    .withFailureHandler((err) => {
+                        hideLoader();
+                        customAlert("Error Server:\n" + (err && err.message ? err.message : "Gagal menghubungi server."));
+                    })[funcName](...(argsArray || []));
+                return;
+            }
+
+            // 4. Konfigurasi belum diisi
+            hideLoader();
+            customAlert("URL API Google Apps Script (GAS_API_URL) belum diatur!\n\nSilakan tempel URL Web App (/exec) Anda pada variabel GAS_API_URL di bagian atas kode script, atau ubah IS_PREVIEW menjadi true untuk pengujian lokal.");
+        }
+
+        function handleDummyBackend(funcName, args) {
+            const today = getTodayStr();
+            switch (funcName) {
+                case 'login_server': {
+                    const [u, p] = args;
+                    const found = DUMMY_DB.users.find(x => x.username.toLowerCase() === String(u).toLowerCase() && x.password === String(p));
+                    if (found) return { success: true, user: { username: found.username, role: found.role, nama: found.nama } };
+                    return { success: false, message: "Username atau Password salah!" };
+                }
+                case 'getInitialData_server': {
+                    const tgl = args[0] || today;
+                    return {
+                        siswa: [...DUMMY_DB.siswa],
+                        absensi: DUMMY_DB.absensi.filter(a => a.tanggal === tgl),
+                        pengaturan: { ...DUMMY_DB.pengaturan }
+                    };
+                }
+                case 'prosesScanQR_server': {
+                    const nis = String(args[0] || "").trim().toUpperCase();
+                    const siswa = DUMMY_DB.siswa.find(s => String(s.nis).toUpperCase() === nis);
+                    if (!siswa) return { statusCode: "NOT_FOUND", message: `QR Code / NIS "${nis}" tidak terdaftar di database siswa.` };
+
+                    const jamSekarang = getCurrentTimeStr();
+                    const menitSekarang = timeToMinutes(jamSekarang);
+                    const menitMasuk = timeToMinutes(DUMMY_DB.pengaturan.jam_masuk);
+                    const menitPulang = timeToMinutes(DUMMY_DB.pengaturan.jam_pulang);
+                    const cooldown = parseInt(DUMMY_DB.pengaturan.cooldown_menit || 5, 10);
+                    const existing = DUMMY_DB.absensi.find(a => a.tanggal === today && String(a.nis).toUpperCase() === nis);
+
+                    if (!existing) {
+                        const isLate = menitSekarang > menitMasuk;
+                        const rec = {
+                            id_absen: "ABS-" + Date.now(),
+                            tanggal: today,
+                            id_siswa: siswa.id_siswa,
+                            nis: siswa.nis,
+                            nama: siswa.nama,
+                            jenis_kelamin: siswa.jenis_kelamin,
+                            kelas: siswa.kelas,
+                            jam_masuk: jamSekarang,
+                            jam_pulang: "",
+                            status: isLate ? "T" : "H",
+                            status_pulang: "Belum Pulang",
+                            keterangan: isLate ? `Terlambat (Batas ${DUMMY_DB.pengaturan.jam_masuk})` : "Tepat Waktu"
+                        };
+                        DUMMY_DB.absensi.unshift(rec);
+                        return { statusCode: "CHECK_IN", message: isLate ? "Scan Masuk Tercatat (TERLAMBAT)" : "Scan Masuk Berhasil (HADIR TEPAT WAKTU)", siswa, record: rec, jamScan: jamSekarang };
+                    }
+
+                    if (!existing.jam_masuk) {
+                        const isLate = menitSekarang > menitMasuk;
+                        existing.jam_masuk = jamSekarang;
+                        existing.status = isLate ? "T" : "H";
+                        existing.status_pulang = "Belum Pulang";
+                        existing.keterangan = isLate ? "Terlambat (Update via Scan)" : "Hadir Tepat Waktu (Update via Scan)";
+                        return { statusCode: "CHECK_IN", message: "Status kehadiran diperbarui via Scan Masuk.", siswa, record: existing, jamScan: jamSekarang };
+                    }
+
+                    if (existing.jam_pulang) {
+                        return { statusCode: "ALREADY_DONE", message: `Siswa sudah tercatat keluar/pulang pada pukul ${existing.jam_pulang} (${existing.status_pulang}).`, siswa, record: existing, jamScan: jamSekarang };
+                    }
+
+                    const selisihMenit = menitSekarang - timeToMinutes(existing.jam_masuk);
+                    if (selisihMenit >= 0 && selisihMenit < cooldown) {
+                        return { statusCode: "COOLDOWN", message: `Siswa baru saja scan masuk pukul ${existing.jam_masuk}. Tunggu ${cooldown - selisihMenit} menit lagi untuk scan keluar.`, siswa, record: existing, jamScan: jamSekarang, sisaMenit: cooldown - selisihMenit };
+                    }
+
+                    if (menitSekarang < menitPulang) {
+                        return { statusCode: "NEED_IJIN_REASON", message: `Scan keluar sebelum jam pulang (${DUMMY_DB.pengaturan.jam_pulang}). Silakan masukkan alasan izin pulang awal.`, siswa, record: existing, jamScan: jamSekarang };
+                    }
+
+                    existing.jam_pulang = jamSekarang;
+                    existing.status_pulang = "Pulang Normal";
+                    return { statusCode: "CHECK_OUT", message: "Scan Pulang Normal Berhasil Tercatat. Hati-hati di jalan!", siswa, record: existing, jamScan: jamSekarang };
+                }
+                case 'simpanIjinPulang_server': {
+                    const [idAbsen, alasan] = args;
+                    const jamSekarang = getCurrentTimeStr();
+                    const rec = DUMMY_DB.absensi.find(a => a.id_absen === idAbsen);
+                    if (!rec) return { success: false, message: "Data presensi hari ini tidak ditemukan." };
+                    rec.jam_pulang = jamSekarang;
+                    rec.status = "I";
+                    rec.status_pulang = "Ijin Pulang Awal";
+                    rec.keterangan = "Ijin Pulang: " + alasan;
+                    const siswa = DUMMY_DB.siswa.find(s => s.id_siswa === rec.id_siswa) || rec;
+                    return { success: true, message: "Status siswa otomatis diperbarui menjadi IJIN (Pulang Awal).", siswa, record: rec, jamScan: jamSekarang };
+                }
+                case 'simpanAbsenManual_server': {
+                    const p = JSON.parse(args[0]);
+                    const siswa = DUMMY_DB.siswa.find(s => s.id_siswa === p.id_siswa);
+                    if (!siswa) return { success: false, message: "Siswa tidak ditemukan." };
+                    const existing = DUMMY_DB.absensi.find(a => a.tanggal === p.tanggal && a.id_siswa === siswa.id_siswa);
+                    if (existing) {
+                        existing.status = p.status;
+                        existing.status_pulang = "-";
+                        existing.keterangan = p.keterangan || "Input Manual";
+                    } else {
+                        DUMMY_DB.absensi.unshift({
+                            id_absen: "ABS-" + Date.now(),
+                            tanggal: p.tanggal,
+                            id_siswa: siswa.id_siswa,
+                            nis: siswa.nis,
+                            nama: siswa.nama,
+                            jenis_kelamin: siswa.jenis_kelamin,
+                            kelas: siswa.kelas,
+                            jam_masuk: "",
+                            jam_pulang: "",
+                            status: p.status,
+                            status_pulang: "-",
+                            keterangan: p.keterangan || "Input Manual"
+                        });
+                    }
+                    return { success: true, message: "Status ketidakhadiran berhasil disimpan." };
+                }
+                case 'getSiswa_server':
+                    return [...DUMMY_DB.siswa];
+                case 'saveSiswa_server': {
+                    const obj = JSON.parse(args[0]);
+                    const nisBaru = String(obj.nis).trim().toUpperCase();
+                    if (obj.id_siswa) {
+                        const idx = DUMMY_DB.siswa.findIndex(s => s.id_siswa === obj.id_siswa);
+                        if (idx >= 0) {
+                            DUMMY_DB.siswa[idx] = { ...obj, nis: nisBaru };
+                            return { success: true, message: "Data siswa berhasil diperbarui." };
+                        }
+                    }
+                    if (DUMMY_DB.siswa.some(s => String(s.nis).toUpperCase() === nisBaru)) {
+                        return { success: false, message: `NIS ${nisBaru} sudah terdaftar pada siswa lain!` };
+                    }
+                    obj.id_siswa = "S" + Date.now();
+                    obj.nis = nisBaru;
+                    DUMMY_DB.siswa.push(obj);
+                    return { success: true, message: "Siswa baru berhasil ditambahkan." };
+                }
+                case 'deleteSiswa_server': {
+                    DUMMY_DB.siswa = DUMMY_DB.siswa.filter(s => s.id_siswa !== args[0]);
+                    return { success: true, message: "Siswa berhasil dihapus." };
+                }
+                case 'getRekap_server': {
+                    const [bulan, kelas] = args;
+                    const rows = DUMMY_DB.absensi.filter(a => {
+                        const mB = (bulan === 'all') || (String(a.tanggal).substring(5, 7) === bulan);
+                        const mK = (!kelas) || (String(a.kelas) === String(kelas));
+                        return mB && mK;
+                    });
+                    return { absensi: rows, siswa: [...DUMMY_DB.siswa] };
+                }
+                case 'getPengaturan_server':
+                    return { ...DUMMY_DB.pengaturan };
+                case 'savePengaturan_server': {
+                    DUMMY_DB.pengaturan = JSON.parse(args[0]);
+                    return { success: true, message: "Pengaturan jam gerbang berhasil disimpan." };
+                }
+                case 'getUsers_server':
+                    return DUMMY_DB.users.map(u => ({ username: u.username, role: u.role, nama: u.nama }));
+                case 'saveUser_server': {
+                    const uObj = JSON.parse(args[0]);
+                    const idx = DUMMY_DB.users.findIndex(u => u.username.toLowerCase() === uObj.username.toLowerCase());
+                    if (idx >= 0) DUMMY_DB.users[idx] = uObj;
+                    else DUMMY_DB.users.push(uObj);
+                    return { success: true, message: "Akun pengguna berhasil disimpan." };
+                }
+                case 'deleteUser_server': {
+                    if (String(args[0]).toLowerCase() === 'admin') {
+                        return { success: false, message: "Akun Admin utama tidak dapat dihapus." };
+                    }
+                    DUMMY_DB.users = DUMMY_DB.users.filter(u => u.username !== args[0]);
+                    return { success: true, message: "Akun berhasil dihapus." };
+                }
+                case 'changeOwnPassword_server': {
+                    const [un, oldP, newP] = args;
+                    const usr = DUMMY_DB.users.find(u => u.username === un && u.password === oldP);
+                    if (!usr) return { success: false, message: "Password lama tidak sesuai!" };
+                    usr.password = newP;
+                    return { success: true, message: "Password berhasil diperbarui!" };
+                }
+                default:
+                    return { success: false, message: "Fungsi tidak ditemukan." };
+            }
+        }
+
+        // =========================================================================
+        // AUTENTIKASI & NAVIGASI
+        // =========================================================================
+        function handleLogin() {
+            const u = document.getElementById('login-username').value.trim();
+            const p = document.getElementById('login-password').value.trim();
+            if (!u || !p) return customAlert("Username dan Password wajib diisi.");
+
+            callBackend('login_server', [u, p], (res) => {
+                if (res && res.success) {
+                    STATE.user = res.user;
+                    document.getElementById('badge-role-aktif').innerText = `Role: ${STATE.user.role}`;
+                    document.getElementById('badge-role-aktif').className = STATE.user.role === 'Admin'
+                        ? 'badge bg-danger border border-light'
+                        : 'badge bg-success border border-light';
+
+                    document.querySelectorAll('.admin-only').forEach(el => {
+                        if (STATE.user.role === 'Admin') el.classList.remove('hidden');
+                        else el.classList.add('hidden');
+                    });
+
+                    document.getElementById('page-login').classList.add('hidden');
+                    document.getElementById('main-app').classList.remove('hidden');
+                    navigate('dashboard');
+                } else {
+                    customAlert(res && res.message ? res.message : "Login gagal! Periksa kembali Username dan Password.");
+                }
+            }, "Memverifikasi Akun...");
+        }
+
+        function handleLogout() {
+            customConfirm("Apakah Anda yakin ingin keluar dari aplikasi?", () => {
+                stopQRScanner();
+                document.body.classList.remove('kiosk-mode');
+                STATE.user = null;
+                document.getElementById('main-app').classList.add('hidden');
+                document.getElementById('page-login').classList.remove('hidden');
+                document.getElementById('login-password').value = '';
+            });
+        }
+
+        function navigate(page) {
+            if (page === 'pengaturan' && STATE.user && STATE.user.role !== 'Admin') {
+                return customAlert("Akses ditolak. Menu Pengaturan khusus untuk Admin.");
+            }
+            if (page !== 'scan') {
+                stopQRScanner();
+                document.body.classList.remove('kiosk-mode');
+            }
+
+            const pages = ['dashboard', 'scan', 'siswa', 'rekap', 'pengaturan'];
+            pages.forEach(p => {
+                const nav = document.getElementById('nav-' + p);
+                const view = document.getElementById('view-' + p);
+                if (nav) nav.classList.remove('active');
+                if (view) view.classList.add('hidden');
+            });
+
+            document.getElementById('nav-' + page).classList.add('active');
+            document.getElementById('view-' + page).classList.remove('hidden');
+
+            const titles = {
+                dashboard: "Dashboard",
+                scan: "Scan QR Gerbang",
+                siswa: "Data Siswa & Kartu QR",
+                rekap: "Rekap Presensi",
+                pengaturan: "Pengaturan & Akun"
+            };
+            document.getElementById('app-title').innerText = titles[page] || "Dashboard";
+
+            if (page === 'dashboard') loadDashboardData();
+            if (page === 'scan') initScanPage();
+            if (page === 'siswa') loadSiswaData();
+            if (page === 'rekap') initRekapPage();
+            if (page === 'pengaturan') loadPengaturanDanUsers();
+        }
+
+        // =========================================================================
+        // 1. DASHBOARD HARIAN
+        // =========================================================================
+        function loadDashboardData() {
+            const tglEl = document.getElementById('dash-filter-tanggal');
+            if (!tglEl.value) tglEl.value = getTodayStr();
+            const tgl = tglEl.value;
+
+            callBackend('getInitialData_server', [tgl], (res) => {
+                STATE.siswa = res.siswa || [];
+                STATE.absensiHariIni = res.absensi || [];
+                STATE.pengaturan = res.pengaturan || STATE.pengaturan;
+                populateAllClassDropdowns();
+                renderDashboardUI();
+            }, "Memuat Dashboard...");
+        }
+
+        function populateAllClassDropdowns() {
+            const kelasList = [...new Set(STATE.siswa.map(s => String(s.kelas || '').trim()).filter(Boolean))].sort();
+            ['dash-filter-kelas', 'siswa-filter-kelas', 'rekap-filter-kelas'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const prevVal = el.value;
+                el.innerHTML = '<option value="">Semua Kelas</option>' + kelasList.map(k => `<option value="${escapeHTML(k)}">${escapeHTML(k)}</option>`).join('');
+                if (kelasList.includes(prevVal)) el.value = prevVal;
+            });
+        }
+
+        function formatTanggalIndo(tglStr) {
+            if (!tglStr) return "";
+            const d = new Date(tglStr + 'T00:00:00');
+            if (isNaN(d.getTime())) return tglStr;
+            return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        function getStatusBadgeHTML(status) {
+            const st = String(status || '').toUpperCase();
+            if (st === 'H') return '<span class="badge bg-success">Hadir (H)</span>';
+            if (st === 'T') return '<span class="badge bg-orange text-white">Terlambat (T)</span>';
+            if (st === 'I') return '<span class="badge bg-primary">Ijin (I)</span>';
+            if (st === 'S') return '<span class="badge bg-purple text-white">Sakit (S)</span>';
+            if (st === 'A') return '<span class="badge bg-danger">Alpa (A)</span>';
+            return `<span class="badge bg-secondary">${escapeHTML(st || '-')}</span>`;
+        }
+
+        function renderDashboardUI() {
+            const filterKls = document.getElementById('dash-filter-kelas').value;
+            const tgl = document.getElementById('dash-filter-tanggal').value;
+            document.getElementById('dash-label-tanggal').innerText = `(${formatTanggalIndo(tgl)})`;
+
+            const siswaFiltered = filterKls ? STATE.siswa.filter(s => s.kelas === filterKls) : STATE.siswa;
+            const absenFiltered = filterKls ? STATE.absensiHariIni.filter(a => a.kelas === filterKls) : STATE.absensiHariIni;
+
+            const kelasUnik = [...new Set(siswaFiltered.map(s => s.kelas).filter(Boolean))];
+            document.getElementById('dash-total-siswa').innerText = siswaFiltered.length;
+            document.getElementById('dash-total-kelas').innerText = kelasUnik.length;
+
+            let h = 0, t = 0, i = 0, s = 0, a = 0;
+            absenFiltered.forEach(r => {
+                const st = String(r.status).toUpperCase();
+                if (st === 'H') h++;
+                else if (st === 'T') t++;
+                else if (st === 'I') i++;
+                else if (st === 'S') s++;
+                else if (st === 'A') a++;
+            });
+
+            document.getElementById('dash-h').innerText = h;
+            document.getElementById('dash-t').innerText = t;
+            document.getElementById('dash-i').innerText = i;
+            document.getElementById('dash-s').innerText = s;
+            document.getElementById('dash-a').innerText = a;
+
+            const tidakHadir = absenFiltered.filter(r => ['I', 'S', 'A'].includes(String(r.status).toUpperCase()));
+            const tbTH = document.getElementById('tbody-dash-tidak-hadir');
+            if (tidakHadir.length === 0) {
+                tbTH.innerHTML = '<tr><td colspan="9" class="text-muted py-3">Tidak ada siswa berstatus Ijin, Sakit, atau Alpa pada tanggal ini.</td></tr>';
+            } else {
+                tbTH.innerHTML = tidakHadir.map((r, idx) => `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td><span class="badge bg-secondary">${escapeHTML(r.nis)}</span></td>
+                        <td class="text-start fw-bold">${escapeHTML(r.nama)}</td>
+                        <td>${escapeHTML(r.jenis_kelamin)}</td>
+                        <td><span class="badge bg-dark">${escapeHTML(r.kelas)}</span></td>
+                        <td>${getStatusBadgeHTML(r.status)}</td>
+                        <td>${escapeHTML(r.jam_masuk || '-')}</td>
+                        <td>${escapeHTML(r.jam_pulang || '-')}</td>
+                        <td class="text-start small">${escapeHTML(r.keterangan || '-')}</td>
+                    </tr>`).join('');
+            }
+
+            const tbAkt = document.getElementById('tbody-dash-aktivitas');
+            if (absenFiltered.length === 0) {
+                tbAkt.innerHTML = '<tr><td colspan="9" class="text-muted py-3">Belum ada aktivitas scan gerbang pada tanggal ini.</td></tr>';
+            } else {
+                tbAkt.innerHTML = absenFiltered.map((r, idx) => `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td><span class="badge bg-secondary">${escapeHTML(r.nis)}</span></td>
+                        <td class="text-start fw-bold">${escapeHTML(r.nama)}</td>
+                        <td>${escapeHTML(r.jenis_kelamin)}</td>
+                        <td><span class="badge bg-dark">${escapeHTML(r.kelas)}</span></td>
+                        <td class="fw-bold text-success">${escapeHTML(r.jam_masuk || '-')}</td>
+                        <td class="fw-bold text-primary">${escapeHTML(r.jam_pulang || '-')}</td>
+                        <td>${getStatusBadgeHTML(r.status)}</td>
+                        <td><span class="badge ${r.status_pulang === 'Pulang Normal' ? 'bg-success' : (r.status_pulang === 'Ijin Pulang Awal' ? 'bg-primary' : 'bg-secondary')}">${escapeHTML(r.status_pulang || '-')}</span></td>
+                    </tr>`).join('');
+            }
+        }
+
+        function openModalAbsenManual() {
+            document.getElementById('m-absen-tanggal').value = document.getElementById('dash-filter-tanggal').value || getTodayStr();
+            const sel = document.getElementById('m-absen-siswa');
+            sel.innerHTML = '<option value="">-- Pilih Siswa --</option>' +
+                STATE.siswa.slice().sort((a, b) => a.kelas.localeCompare(b.kelas) || a.nama.localeCompare(b.nama))
+                    .map(s => `<option value="${escapeHTML(s.id_siswa)}">[${escapeHTML(s.kelas)}] ${escapeHTML(s.nama)} (${escapeHTML(s.nis)})</option>`).join('');
+            document.getElementById('m-absen-ket').value = '';
+            new bootstrap.Modal(document.getElementById('modalAbsenManual')).show();
+        }
+
+        function simpanAbsenManual() {
+            const payload = {
+                tanggal: document.getElementById('m-absen-tanggal').value,
+                id_siswa: document.getElementById('m-absen-siswa').value,
+                status: document.getElementById('m-absen-status').value,
+                keterangan: document.getElementById('m-absen-ket').value.trim()
+            };
+            if (!payload.tanggal || !payload.id_siswa) return customAlert("Pilih tanggal dan siswa terlebih dahulu.");
+
+            callBackend('simpanAbsenManual_server', [JSON.stringify(payload)], (res) => {
+                if (res && res.success) {
+                    const inst = bootstrap.Modal.getInstance(document.getElementById('modalAbsenManual'));
+                    if (inst) inst.hide();
+                    loadDashboardData();
+                    customAlert(res.message);
+                } else {
+                    customAlert(res && res.message ? res.message : "Gagal menyimpan data.");
+                }
+            }, "Menyimpan Status...");
+        }
+
+        // =========================================================================
+        // 2. SCAN QR (PERBAIKAN KAMERA LAPTOP/HP, FALLBACK CERDAS & SCAN FOTO QR)
+        // =========================================================================
+        function initScanPage() {
+            document.getElementById('scan-nama-sekolah').innerText = STATE.pengaturan.nama_sekolah || "Sekolah";
+            document.getElementById('info-jam-masuk').innerText = STATE.pengaturan.jam_masuk || "07:15";
+            document.getElementById('info-jam-pulang').innerText = STATE.pengaturan.jam_pulang || "14:05";
+            document.getElementById('info-cooldown').innerText = STATE.pengaturan.cooldown_menit || 5;
+
+            if (IS_PREVIEW) document.getElementById('preview-simulasi-panel').classList.remove('hidden');
+
+            // PENTING: Tidak memanggil getUserMedia()/getCameras() secara otomatis di sini
+            // agar tidak ditolak browser sebelum ada klik tombol (user gesture).
+            if (STATE.availableCameras.length === 0) {
+                const sel = document.getElementById('select-camera-device');
+                if (sel) sel.innerHTML = '<option value="">Klik "Mulai Kamera" atau tombol Deteksi...</option>';
+            }
+
+            callBackend('getInitialData_server', [getTodayStr()], (res) => {
+                STATE.siswa = res.siswa || [];
+                STATE.absensiHariIni = res.absensi || [];
+                STATE.pengaturan = res.pengaturan || STATE.pengaturan;
+                document.getElementById('scan-nama-sekolah').innerText = STATE.pengaturan.nama_sekolah;
+                document.getElementById('info-jam-masuk').innerText = STATE.pengaturan.jam_masuk;
+                document.getElementById('info-jam-pulang').innerText = STATE.pengaturan.jam_pulang;
+                document.getElementById('info-cooldown').innerText = STATE.pengaturan.cooldown_menit;
+                renderRecentScanTable();
+                const usbInput = document.getElementById('input-usb-qr');
+                if (usbInput) usbInput.focus();
+            }, false);
+        }
+
+        /**
+         * Memindai perangkat kamera fisik hanya saat dipicu user gesture
+         * (tombol Deteksi atau tombol Mulai Kamera).
+         */
+        async function loadAvailableLaptopCameras(showFeedback = false) {
+            const sel = document.getElementById('select-camera-device');
+            const btnRef = document.getElementById('btn-refresh-cam');
+            if (!sel || typeof Html5Qrcode === 'undefined') return [];
+
+            if (btnRef) {
+                btnRef.disabled = true;
+                btnRef.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            }
+            sel.innerHTML = '<option value="">Mendeteksi perangkat kamera...</option>';
+
+            try {
+                const devices = await Html5Qrcode.getCameras();
+                STATE.availableCameras = Array.isArray(devices) ? devices : [];
+                sel.innerHTML = '';
+
+                if (STATE.availableCameras.length > 0) {
+                    let preferredIndex = 0;
+                    STATE.availableCameras.forEach((cam, idx) => {
+                        const label = (cam.label || '').toLowerCase();
+                        if (label.includes('integrated') || label.includes('webcam') || label.includes('front') || label.includes('hd camera')) {
+                            preferredIndex = idx;
+                        }
+                    });
+
+                    STATE.availableCameras.forEach((cam, idx) => {
+                        const opt = document.createElement('option');
+                        opt.value = cam.id;
+                        opt.text = cam.label || `Kamera ${idx + 1} (${String(cam.id).substring(0, 8)}...)`;
+                        if (idx === preferredIndex) opt.selected = true;
+                        sel.appendChild(opt);
+                    });
+
+                    if (showFeedback) {
+                        customAlert(`Berhasil mendeteksi ${STATE.availableCameras.length} perangkat kamera.\nSilakan klik "Mulai Kamera" untuk mengaktifkan pemindai.`);
+                    }
+                } else {
+                    sel.innerHTML = '<option value="">Tidak ada kamera terdeteksi</option>';
+                    if (showFeedback) {
+                        customAlert("Tidak ada perangkat kamera yang terdeteksi di laptop/HP ini. Anda tetap bisa menggunakan USB Scanner atau tombol 'Scan Foto QR'.");
+                    }
+                }
+                return STATE.availableCameras;
+            } catch (err) {
+                sel.innerHTML = '<option value="">Kamera Default (Otomatis)</option>';
+                if (showFeedback) {
+                    handleCameraStartError(err);
+                }
+                return [];
+            } finally {
+                if (btnRef) {
+                    btnRef.disabled = false;
+                    btnRef.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Deteksi';
+                }
+            }
+        }
+
+        function toggleMirrorCamera() {
+            const wrap = document.getElementById('qr-reader-wrapper');
+            if (wrap) wrap.classList.toggle('mirror-active');
+        }
+
+        function toggleKioskMode() {
+            document.body.classList.toggle('kiosk-mode');
+            const btn = document.getElementById('btn-kiosk-toggle');
+            if (document.body.classList.contains('kiosk-mode')) {
+                btn.innerHTML = '<i class="fas fa-compress me-1"></i> Keluar Mode Gerbang';
+            } else {
+                btn.innerHTML = '<i class="fas fa-expand me-1"></i> Mode Gerbang';
+            }
+        }
+
+        /**
+         * Menyalakan Live QR Scanner dengan rantai fallback cerdas:
+         * 1. Device ID terpilih di dropdown
+         * 2. { facingMode: "user" } (optimal untuk webcam laptop)
+         * 3. { facingMode: "environment" } (optimal untuk kamera belakang HP)
+         */
+        async function startQRScanner() {
+            if (STATE.cameraRunning) return;
+            if (typeof Html5Qrcode === 'undefined') {
+                return customAlert("Pustaka kamera QR (html5-qrcode) belum termuat. Periksa sambungan internet Anda.");
+            }
+
+            const btnStart = document.getElementById('btn-start-cam');
+            btnStart.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menghubungkan...';
+            btnStart.disabled = true;
+
+            // Bersihkan instance lama jika masih tersisa
+            if (STATE.html5QrCode) {
+                try { await STATE.html5QrCode.stop(); } catch (e) {}
+                try { STATE.html5QrCode.clear(); } catch (e) {}
+                STATE.html5QrCode = null;
+            }
+
+            // Deteksi kamera saat klik pertama jika daftar kamera masih kosong
+            if (STATE.availableCameras.length === 0) {
+                await loadAvailableLaptopCameras(false);
+            }
+
+            const sel = document.getElementById('select-camera-device');
+            const selectedDeviceId = sel ? sel.value : "";
+            const selectedLabel = (sel && sel.selectedOptions[0] ? sel.selectedOptions[0].text : "").toLowerCase();
+
+            // Siapkan daftar target berurutan (Smart Fallback Chain)
+            const candidateTargets = [];
+            if (selectedDeviceId) {
+                candidateTargets.push({ type: 'deviceId', value: selectedDeviceId });
+            }
+            candidateTargets.push({ type: 'facingUser', value: { facingMode: "user" } });
+            candidateTargets.push({ type: 'facingEnv', value: { facingMode: "environment" } });
+
+            const config = {
+                fps: 15,
+                qrbox: { width: 240, height: 240 },
+                aspectRatio: 1.333333
+            };
+
+            const onScanSuccess = (decodedText) => { onQRCodeDetected(decodedText); };
+            const onScanFailure = () => {};
+
+            let started = false;
+            let lastErr = null;
+            let activeTargetType = '';
+
+            for (const target of candidateTargets) {
+                try {
+                    STATE.html5QrCode = new Html5Qrcode("qr-reader");
+                    await STATE.html5QrCode.start(target.value, config, onScanSuccess, onScanFailure);
+                    started = true;
+                    activeTargetType = target.type;
+                    break;
+                } catch (err) {
+                    lastErr = err;
+                    try {
+                        if (STATE.html5QrCode) STATE.html5QrCode.clear();
+                    } catch (e) {}
+                    STATE.html5QrCode = null;
+
+                    // Jika error jelas berasal dari blokir Permissions-Policy atau izin ditolak permanen, hentikan percobaan fallback
+                    const msgLow = String(err && err.message ? err.message : err).toLowerCase();
+                    if (msgLow.includes('permissions policy') || msgLow.includes('notallowederror') || msgLow.includes('permission denied')) {
+                        break;
+                    }
+                }
+            }
+
+            btnStart.disabled = false;
+            btnStart.innerHTML = '<i class="fas fa-play me-1"></i> Mulai Kamera';
+
+            if (started) {
+                STATE.cameraRunning = true;
+                document.getElementById('qr-placeholder-box').classList.add('hidden');
+                document.getElementById('btn-start-cam').classList.add('hidden');
+                document.getElementById('btn-stop-cam').classList.remove('hidden');
+
+                // Aktifkan mode cermin otomatis untuk kamera depan / webcam laptop
+                const wrap = document.getElementById('qr-reader-wrapper');
+                const isFrontCam = activeTargetType === 'facingUser' || selectedLabel.includes('integrated') || selectedLabel.includes('front') || selectedLabel.includes('webcam');
+                if (wrap) {
+                    if (isFrontCam) wrap.classList.add('mirror-active');
+                    else wrap.classList.remove('mirror-active');
+                }
+            } else {
+                handleCameraStartError(lastErr);
+            }
+        }
+
+        function handleCameraStartError(err) {
+            document.getElementById('qr-placeholder-box').classList.remove('hidden');
+            STATE.cameraRunning = false;
+
+            const errName = (err && err.name) ? String(err.name) : 'Error';
+            const errMsg = (err && err.message) ? String(err.message) : String(err || 'Tidak diketahui');
+            const fullLow = (errName + ' ' + errMsg).toLowerCase();
+
+            // Cek apakah iframe saat ini memblokir Permissions-Policy camera
+            let blockedByPolicy = fullLow.includes('permissions policy') || fullLow.includes('not allowed in this document');
+            try {
+                if (document.permissionsPolicy && typeof document.permissionsPolicy.allowsFeature === 'function') {
+                    if (!document.permissionsPolicy.allowsFeature('camera')) blockedByPolicy = true;
+                } else if (document.featurePolicy && typeof document.featurePolicy.allowsFeature === 'function') {
+                    if (!document.featurePolicy.allowsFeature('camera')) blockedByPolicy = true;
+                }
+            } catch (e) {}
+
+            let panduan = "";
+            if (blockedByPolicy) {
+                panduan =
+                    "Kamera live diblokir oleh kebijakan iframe (Permissions-Policy).\n\n" +
+                    "Solusi:\n" +
+                    "1. Jalankan file index.html ini langsung melalui URL HTTPS mandiri (GitHub Pages / Blogger), bukan dari dalam iframe Google Apps Script atau preview sandbox.\n" +
+                    "2. Sebagai alternatif cepat di perangkat ini, gunakan tombol 'Scan Foto QR' atau USB Barcode Scanner.";
+            } else if (fullLow.includes('notreadableerror') || fullLow.includes('could not start video source') || fullLow.includes('device in use') || fullLow.includes('trackstarterror')) {
+                panduan =
+                    "Kamera laptop sedang dikunci atau digunakan oleh aplikasi lain.\n\n" +
+                    "Langkah Mengatasi:\n" +
+                    "1. Tutup aplikasi Zoom, Google Meet, OBS Studio, atau aplikasi Kamera Windows.\n" +
+                    "2. Pastikan tombol/saklar privasi kamera di keyboard laptop dalam posisi aktif.\n" +
+                    "3. Muat ulang halaman (F5) lalu klik 'Mulai Kamera' kembali.";
+            } else if (fullLow.includes('notfounderror') || fullLow.includes('devicesnotfounderror') || fullLow.includes('requested device not found')) {
+                panduan =
+                    "Perangkat kamera tidak ditemukan di komputer/HP ini.\n\n" +
+                    "Solusi:\n" +
+                    "1. Pastikan webcam sudah terpasang dan driver aktif.\n" +
+                    "2. Klik tombol 'Deteksi' di sebelah dropdown kamera, atau gunakan USB Barcode Scanner / Scan Foto QR.";
+            } else if (fullLow.includes('notallowederror') || fullLow.includes('permission denied')) {
+                panduan =
+                    "Akses kamera ditolak oleh browser atau sistem operasi.\n\n" +
+                    "Langkah Mengatasi:\n" +
+                    "1. Klik ikon pengaturan/gembok di sebelah kiri URL browser -> pastikan Kamera = Izinkan (Allow) -> Refresh halaman.\n" +
+                    "2. Di Windows: buka Settings > Privacy & security > Camera -> pastikan 'Camera access' dan 'Let desktop apps access your camera' aktif (ON).";
+            } else {
+                panduan =
+                    "Gagal menyalakan kamera.\n\n" +
+                    "Coba klik tombol 'Deteksi' untuk memilih kamera lain, atau gunakan 'Scan Foto QR' / USB Barcode Scanner.";
+            }
+
+            customAlert(`${panduan}\n\n[Detail Teknis: ${errName} - ${errMsg}]`);
+        }
+
+        async function stopQRScanner() {
+            if (STATE.html5QrCode && STATE.cameraRunning) {
+                try {
+                    await STATE.html5QrCode.stop();
+                    STATE.html5QrCode.clear();
+                } catch (e) {}
+                STATE.html5QrCode = null;
+                STATE.cameraRunning = false;
+                document.getElementById('btn-start-cam').classList.remove('hidden');
+                document.getElementById('btn-stop-cam').classList.add('hidden');
+                document.getElementById('qr-placeholder-box').classList.remove('hidden');
+            }
+        }
+
+        async function switchCameraDevice() {
+            if (STATE.cameraRunning) {
+                await stopQRScanner();
+                setTimeout(() => { startQRScanner(); }, 300);
+            }
+        }
+
+        /**
+         * Cadangan Scan QR dari File Gambar / Kamera Sistem
+         */
+        function triggerQRFileUpload() {
+            const inp = document.getElementById('input-qr-file');
+            if (!inp) return;
+            inp.value = '';
+            inp.click();
+        }
+
+        async function handleQRFileScan(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            if (typeof Html5Qrcode === 'undefined') {
+                return customAlert("Pustaka pemindai QR belum termuat.");
+            }
+
+            showLoader("Membaca QR Code dari Foto...");
+            let fileScanner = null;
+            try {
+                fileScanner = new Html5Qrcode("qr-file-temp-reader");
+                const decodedText = await fileScanner.scanFile(file, false);
+                hideLoader();
+                onQRCodeDetected(decodedText, true);
+            } catch (err) {
+                hideLoader();
+                customAlert("QR Code tidak terbaca pada foto yang dipilih.\n\nPastikan foto kartu QR fokus, terang, dan tidak terpotong.");
+            } finally {
+                try {
+                    if (fileScanner) fileScanner.clear();
+                } catch (e) {}
+                event.target.value = '';
+            }
+        }
+
+        function submitManualQR() {
+            const inp = document.getElementById('input-usb-qr');
+            const kode = inp.value.trim();
+            if (!kode) return;
+            inp.value = '';
+            onQRCodeDetected(kode, true);
+        }
+
+        function triggerDemoScan(nis) {
+            onQRCodeDetected(nis, true);
+        }
+
+        function onQRCodeDetected(decodedText, bypassDebounce = false) {
+            const nis = String(decodedText || '').trim();
+            if (!nis || STATE.isProcessingScan) return;
+
+            const now = Date.now();
+            if (!bypassDebounce && nis === STATE.lastScanText && (now - STATE.lastScanTimestamp) < 3000) {
+                return;
+            }
+            STATE.lastScanText = nis;
+            STATE.lastScanTimestamp = now;
+            STATE.isProcessingScan = true;
+
+            callBackend('prosesScanQR_server', [nis], (res) => {
+                STATE.isProcessingScan = false;
+                handleScanResponse(res);
+                const usbInput = document.getElementById('input-usb-qr');
+                if (usbInput) usbInput.focus();
+            }, "Memproses QR Code...");
+        }
+
+        function handleScanResponse(res) {
+            if (!res) return;
+
+            if (res.statusCode === 'NOT_FOUND') {
+                playBeep('error');
+                renderDisplayPanel({
+                    stateClass: 'state-error',
+                    badgeClass: 'bg-danger',
+                    badgeText: 'QR TIDAK TERDAFTAR',
+                    bannerClass: 'alert-danger',
+                    message: res.message,
+                    jamScan: getCurrentTimeStr(),
+                    siswa: { nis: '-', nama: 'Tidak Dikenal', jenis_kelamin: '-', kelas: '-' },
+                    record: null
+                });
+                return;
+            }
+
+            if (res.statusCode === 'CHECK_IN') {
+                const isLate = res.record && res.record.status === 'T';
+                playBeep(isLate ? 'warning' : 'success');
+                renderDisplayPanel({
+                    stateClass: isLate ? 'state-terlambat' : 'state-hadir',
+                    badgeClass: isLate ? 'bg-orange text-white' : 'bg-success',
+                    badgeText: isLate ? 'TERLAMBAT (MASUK)' : 'HADIR (MASUK)',
+                    bannerClass: isLate ? 'alert-warning' : 'alert-success',
+                    message: res.message,
+                    jamScan: res.jamScan,
+                    siswa: res.siswa,
+                    record: res.record
+                });
+                refreshRecentScanSilent();
+                return;
+            }
+
+            if (res.statusCode === 'CHECK_OUT') {
+                playBeep('success');
+                renderDisplayPanel({
+                    stateClass: 'state-pulang',
+                    badgeClass: 'bg-success',
+                    badgeText: 'PULANG NORMAL',
+                    bannerClass: 'alert-success',
+                    message: res.message,
+                    jamScan: res.jamScan,
+                    siswa: res.siswa,
+                    record: res.record
+                });
+                refreshRecentScanSilent();
+                return;
+            }
+
+            if (res.statusCode === 'COOLDOWN') {
+                playBeep('warning');
+                renderDisplayPanel({
+                    stateClass: 'state-warning',
+                    badgeClass: 'bg-warning text-dark',
+                    badgeText: 'SUDAH SCAN MASUK',
+                    bannerClass: 'alert-warning',
+                    message: res.message,
+                    jamScan: res.jamScan,
+                    siswa: res.siswa,
+                    record: res.record
+                });
+                return;
+            }
+
+            if (res.statusCode === 'ALREADY_DONE') {
+                playBeep('warning');
+                renderDisplayPanel({
+                    stateClass: 'state-warning',
+                    badgeClass: 'bg-secondary',
+                    badgeText: 'SUDAH PULANG',
+                    bannerClass: 'alert-secondary',
+                    message: res.message,
+                    jamScan: res.jamScan,
+                    siswa: res.siswa,
+                    record: res.record
+                });
+                return;
+            }
+
+            if (res.statusCode === 'NEED_IJIN_REASON') {
+                playBeep('warning');
+                renderDisplayPanel({
+                    stateClass: 'state-ijin',
+                    badgeClass: 'bg-primary',
+                    badgeText: 'MENUNGGU ALASAN IJIN',
+                    bannerClass: 'alert-info',
+                    message: res.message,
+                    jamScan: res.jamScan,
+                    siswa: res.siswa,
+                    record: res.record
+                });
+
+                document.getElementById('ijin-jam-pulang-ref').innerText = STATE.pengaturan.jam_pulang || "14:05";
+                document.getElementById('ijin-id-absen').value = res.record.id_absen;
+                document.getElementById('ijin-nis').innerText = res.siswa.nis;
+                document.getElementById('ijin-nama').innerText = res.siswa.nama;
+                document.getElementById('ijin-jk').innerText = res.siswa.jenis_kelamin === 'L' ? 'Laki-laki (L)' : 'Perempuan (P)';
+                document.getElementById('ijin-kelas').innerText = res.siswa.kelas;
+                document.getElementById('ijin-alasan-input').value = '';
+
+                STATE.isProcessingScan = true;
+                const modal = new bootstrap.Modal(document.getElementById('modalAlasanIjin'));
+                modal.show();
+                setTimeout(() => document.getElementById('ijin-alasan-input').focus(), 350);
+            }
+        }
+
+        function pilihAlasanCepat(teks) {
+            document.getElementById('ijin-alasan-input').value = teks;
+            document.getElementById('ijin-alasan-input').focus();
+        }
+
+        function batalIjinPulang() {
+            const modalEl = document.getElementById('modalAlasanIjin');
+            const inst = bootstrap.Modal.getInstance(modalEl);
+            if (inst) inst.hide();
+            STATE.isProcessingScan = false;
+            const usbInput = document.getElementById('input-usb-qr');
+            if (usbInput) usbInput.focus();
+        }
+
+        function konfirmasiSimpanIjinPulang() {
+            const idAbsen = document.getElementById('ijin-id-absen').value;
+            const alasan = document.getElementById('ijin-alasan-input').value.trim();
+            if (!alasan) return customAlert("Silakan pilih atau ketik alasan izin pulang terlebih dahulu!");
+
+            callBackend('simpanIjinPulang_server', [idAbsen, alasan], (res) => {
+                const modalEl = document.getElementById('modalAlasanIjin');
+                const inst = bootstrap.Modal.getInstance(modalEl);
+                if (inst) inst.hide();
+                STATE.isProcessingScan = false;
+
+                if (res && res.success) {
+                    playBeep('success');
+                    renderDisplayPanel({
+                        stateClass: 'state-ijin',
+                        badgeClass: 'bg-primary',
+                        badgeText: 'IJIN PULANG AWAL (I)',
+                        bannerClass: 'alert-primary',
+                        message: `Status otomatis berubah menjadi IJIN. Alasan: ${alasan}`,
+                        jamScan: res.jamScan || getCurrentTimeStr(),
+                        siswa: res.siswa,
+                        record: res.record
+                    });
+                    refreshRecentScanSilent();
+                } else {
+                    customAlert(res && res.message ? res.message : "Gagal menyimpan izin pulang.");
+                }
+                const usbInput = document.getElementById('input-usb-qr');
+                if (usbInput) usbInput.focus();
+            }, "Menyimpan Status Ijin...");
+        }
+
+        function renderDisplayPanel({ stateClass, badgeClass, badgeText, bannerClass, message, jamScan, siswa, record }) {
+            const card = document.getElementById('scan-display-card');
+            card.className = `scan-display-card p-4 shadow-sm h-100 ${stateClass}`;
+
+            document.getElementById('scan-standby').classList.add('hidden');
+            document.getElementById('scan-result-content').classList.remove('hidden');
+
+            const badge = document.getElementById('res-status-badge');
+            badge.className = `badge fs-5 px-3 py-2 shadow-sm ${badgeClass}`;
+            badge.innerText = badgeText;
+
+            const banner = document.getElementById('res-pesan-banner');
+            banner.className = `alert py-2 px-3 fw-semibold mb-3 ${bannerClass}`;
+            banner.innerText = message;
+
+            document.getElementById('res-jam-scan').innerText = jamScan || getCurrentTimeStr();
+            document.getElementById('res-nis').innerText = siswa.nis || '-';
+            document.getElementById('res-nama').innerText = siswa.nama || '-';
+
+            const jkLabel = siswa.jenis_kelamin === 'L' ? 'Laki-laki (L)' : (siswa.jenis_kelamin === 'P' ? 'Perempuan (P)' : (siswa.jenis_kelamin || '-'));
+            document.getElementById('res-jk').innerText = jkLabel;
+            document.getElementById('res-kelas').innerText = siswa.kelas || '-';
+
+            const jamMasuk = record && record.jam_masuk ? record.jam_masuk : '-';
+            const jamPulang = record && record.jam_pulang ? record.jam_pulang : 'Belum Pulang';
+            document.getElementById('res-jam-detail').innerHTML = `<span class="text-success">Masuk: ${escapeHTML(jamMasuk)}</span> &nbsp;|&nbsp; <span class="text-primary">Pulang: ${escapeHTML(jamPulang)}</span>`;
+        }
+
+        function refreshRecentScanSilent() {
+            callBackend('getInitialData_server', [getTodayStr()], (res) => {
+                STATE.absensiHariIni = res.absensi || [];
+                renderRecentScanTable();
+            }, false);
+        }
+
+        function renderRecentScanTable() {
+            const tb = document.getElementById('tbody-scan-recent');
+            const list = STATE.absensiHariIni.slice(0, 10);
+            if (list.length === 0) {
+                tb.innerHTML = '<tr><td colspan="8" class="text-muted py-3">Belum ada data scan hari ini.</td></tr>';
+                return;
+            }
+            tb.innerHTML = list.map(r => `
+                <tr>
+                    <td><span class="badge bg-secondary">${escapeHTML(r.nis)}</span></td>
+                    <td class="text-start fw-bold">${escapeHTML(r.nama)}</td>
+                    <td>${escapeHTML(r.jenis_kelamin)}</td>
+                    <td><span class="badge bg-dark">${escapeHTML(r.kelas)}</span></td>
+                    <td class="text-success fw-bold">${escapeHTML(r.jam_masuk || '-')}</td>
+                    <td class="text-primary fw-bold">${escapeHTML(r.jam_pulang || '-')}</td>
+                    <td>${getStatusBadgeHTML(r.status)}</td>
+                    <td class="text-start small">${escapeHTML(r.keterangan || '-')}</td>
+                </tr>`).join('');
+        }
+
+        // =========================================================================
+        // 3. DATA SISWA & KARTU QR
+        // =========================================================================
+        function loadSiswaData() {
+            callBackend('getSiswa_server', [], (data) => {
+                STATE.siswa = data || [];
+                populateAllClassDropdowns();
+                renderTableSiswa();
+            }, "Memuat Data Siswa...");
+        }
+
+        function renderTableSiswa() {
+            const kls = document.getElementById('siswa-filter-kelas').value;
+            const q = document.getElementById('siswa-search').value.trim().toLowerCase();
+            const isAdmin = STATE.user && STATE.user.role === 'Admin';
+
+            let list = STATE.siswa.filter(s => {
+                const matchKls = !kls || s.kelas === kls;
+                const matchQ = !q || String(s.nis).toLowerCase().includes(q) || String(s.nama).toLowerCase().includes(q);
+                return matchKls && matchQ;
+            });
+            list.sort((a, b) => String(a.kelas).localeCompare(String(b.kelas)) || String(a.nama).localeCompare(String(b.nama)));
+
+            const tb = document.getElementById('tbody-siswa');
+            if (list.length === 0) {
+                tb.innerHTML = `<tr><td colspan="${isAdmin ? 7 : 6}" class="text-muted py-4">Tidak ada data siswa ditemukan.</td></tr>`;
+                return;
+            }
+
+            tb.innerHTML = list.map((s, idx) => `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td><span class="badge bg-primary px-2">${escapeHTML(s.nis)}</span></td>
+                    <td class="text-start fw-bold">${escapeHTML(s.nama)}</td>
+                    <td>${s.jenis_kelamin === 'L' ? 'Laki-laki (L)' : 'Perempuan (P)'}</td>
+                    <td><span class="badge bg-dark">${escapeHTML(s.kelas)}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-dark fw-bold" onclick="lihatKartuQR('${escapeHTML(s.id_siswa)}')">
+                            <i class="fas fa-qrcode me-1"></i> QR
+                        </button>
+                    </td>
+                    ${isAdmin ? `
+                    <td>
+                        <button class="btn btn-sm btn-warning" onclick="editSiswa('${escapeHTML(s.id_siswa)}')" title="Edit"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm btn-danger" onclick="hapusSiswa('${escapeHTML(s.id_siswa)}')" title="Hapus"><i class="fas fa-trash"></i></button>
+                    </td>` : ''}
+                </tr>`).join('');
+        }
+
+        function openModalSiswa() {
+            document.getElementById('form-siswa').reset();
+            document.getElementById('f-siswa-id').value = '';
+            document.getElementById('modalSiswaTitle').innerText = 'Tambah Siswa Baru';
+            new bootstrap.Modal(document.getElementById('modalSiswa')).show();
+        }
+
+        function editSiswa(idSiswa) {
+            const s = STATE.siswa.find(x => x.id_siswa === idSiswa);
+            if (!s) return;
+            document.getElementById('f-siswa-id').value = s.id_siswa;
+            document.getElementById('f-siswa-nis').value = s.nis;
+            document.getElementById('f-siswa-nama').value = s.nama;
+            document.getElementById('f-siswa-jk').value = s.jenis_kelamin;
+            document.getElementById('f-siswa-kelas').value = s.kelas;
+            document.getElementById('modalSiswaTitle').innerText = 'Edit Data Siswa';
+            new bootstrap.Modal(document.getElementById('modalSiswa')).show();
+        }
+
+        function simpanSiswa() {
+            const obj = {
+                id_siswa: document.getElementById('f-siswa-id').value,
+                nis: document.getElementById('f-siswa-nis').value.trim().toUpperCase(),
+                nama: document.getElementById('f-siswa-nama').value.trim(),
+                jenis_kelamin: document.getElementById('f-siswa-jk').value,
+                kelas: document.getElementById('f-siswa-kelas').value.trim()
+            };
+            if (!obj.nis || !obj.nama || !obj.kelas) return customAlert("Semua kolom wajib diisi.");
+
+            callBackend('saveSiswa_server', [JSON.stringify(obj)], (res) => {
+                if (res && res.success) {
+                    const inst = bootstrap.Modal.getInstance(document.getElementById('modalSiswa'));
+                    if (inst) inst.hide();
+                    loadSiswaData();
+                    customAlert(res.message);
+                } else {
+                    customAlert(res && res.message ? res.message : "Gagal menyimpan siswa.");
+                }
+            }, "Menyimpan Siswa...");
+        }
+
+        function hapusSiswa(idSiswa) {
+            const s = STATE.siswa.find(x => x.id_siswa === idSiswa);
+            customConfirm(`Hapus permanen siswa "${s ? s.nama : idSiswa}"?`, () => {
+                callBackend('deleteSiswa_server', [idSiswa], (res) => {
+                    loadSiswaData();
+                    customAlert(res && res.message ? res.message : "Siswa dihapus.");
+                }, "Menghapus Siswa...");
+            });
+        }
+
+        function lihatKartuQR(idSiswa) {
+            const s = STATE.siswa.find(x => x.id_siswa === idSiswa);
+            if (!s) return;
+            STATE.activeQRCodeSiswa = s;
+            const box = document.getElementById('single-qr-box');
+            box.innerHTML = '';
+            new QRCode(box, { text: String(s.nis), width: 180, height: 180, correctLevel: QRCode.CorrectLevel.H });
+            document.getElementById('qr-preview-nama').innerText = s.nama;
+            document.getElementById('qr-preview-detail').innerText = `NIS: ${s.nis} | ${s.jenis_kelamin} | Kelas ${s.kelas}`;
+            new bootstrap.Modal(document.getElementById('modalKartuQR')).show();
+        }
+
+        function downloadSingleQR() {
+            const canvas = document.querySelector('#single-qr-box canvas');
+            const img = document.querySelector('#single-qr-box img');
+            const s = STATE.activeQRCodeSiswa;
+            if (!s) return;
+            const dataUrl = canvas ? canvas.toDataURL('image/png') : (img ? img.src : '');
+            if (!dataUrl) return customAlert("QR Code belum siap diunduh.");
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = `QR_${s.nis}_${s.nama.replace(/\s+/g, '_')}.png`;
+            a.click();
+        }
+
+        function cetakKartuQRMassal() {
+            const kls = document.getElementById('siswa-filter-kelas').value;
+            const list = kls ? STATE.siswa.filter(s => s.kelas === kls) : STATE.siswa;
+            if (list.length === 0) return customAlert("Tidak ada data siswa untuk dicetak.");
+
+            const container = document.getElementById('print-container-global');
+            container.innerHTML = `
+                <div style="text-align:center; margin-bottom:14px;">
+                    <h4 style="margin:0; font-weight:bold;">KARTU QR CODE PRESENSI SISWA</h4>
+                    <div style="font-size:13px;">${escapeHTML(STATE.pengaturan.nama_sekolah)} &bull; ${kls ? 'Kelas ' + escapeHTML(kls) : 'Semua Kelas'}</div>
+                </div>
+                <div class="qr-card-grid" id="qr-massal-grid"></div>`;
+
+            const grid = document.getElementById('qr-massal-grid');
+            list.forEach((s, idx) => {
+                const card = document.createElement('div');
+                card.className = 'qr-id-card';
+                card.innerHTML = `
+                    <div style="font-size:11px; font-weight:bold; color:#0d6efd; margin-bottom:4px;">${escapeHTML(STATE.pengaturan.nama_sekolah)}</div>
+                    <div id="qr-item-${idx}" style="display:flex; justify-content:center; margin:6px 0;"></div>
+                    <div style="font-size:12px; font-weight:bold;">${escapeHTML(s.nama)}</div>
+                    <div style="font-size:11px;">NIS: <strong>${escapeHTML(s.nis)}</strong></div>
+                    <div style="font-size:11px; color:#555;">${s.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan'} | Kelas ${escapeHTML(s.kelas)}</div>`;
+                grid.appendChild(card);
+                new QRCode(document.getElementById(`qr-item-${idx}`), {
+                    text: String(s.nis),
+                    width: 110,
+                    height: 110,
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            });
+
+            setTimeout(() => { window.print(); }, 450);
+        }
+
+        // =========================================================================
+        // 4. REKAP & LAPORAN (EXCEL & PDF)
+        // =========================================================================
+        function initRekapPage() {
+            const blnNow = String(new Date().getMonth() + 1).padStart(2, '0');
+            document.getElementById('rekap-filter-bulan').value = blnNow;
+            loadRekapData();
+        }
+
+        function loadRekapData() {
+            const bln = document.getElementById('rekap-filter-bulan').value;
+            const kls = document.getElementById('rekap-filter-kelas').value;
+            callBackend('getRekap_server', [bln, kls], (res) => {
+                STATE.rekapData = (res && res.absensi) ? res.absensi : [];
+                renderTableRekap();
+            }, "Memuat Rekap...");
+        }
+
+        function renderTableRekap() {
+            const tb = document.getElementById('tbody-rekap');
+            if (STATE.rekapData.length === 0) {
+                tb.innerHTML = '<tr><td colspan="11" class="text-muted py-4">Tidak ada data presensi pada periode/kelas ini.</td></tr>';
+                return;
+            }
+            tb.innerHTML = STATE.rekapData.map((r, idx) => `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td>${escapeHTML(r.tanggal)}</td>
+                    <td>${escapeHTML(r.nis)}</td>
+                    <td class="text-start fw-bold">${escapeHTML(r.nama)}</td>
+                    <td>${escapeHTML(r.jenis_kelamin)}</td>
+                    <td>${escapeHTML(r.kelas)}</td>
+                    <td class="text-success fw-bold">${escapeHTML(r.jam_masuk || '-')}</td>
+                    <td class="text-primary fw-bold">${escapeHTML(r.jam_pulang || '-')}</td>
+                    <td>${getStatusBadgeHTML(r.status)}</td>
+                    <td>${escapeHTML(r.status_pulang || '-')}</td>
+                    <td class="text-start small">${escapeHTML(r.keterangan || '-')}</td>
+                </tr>`).join('');
+        }
+
+        function exportRekapExcel() {
+            if (STATE.rekapData.length === 0) return customAlert("Tidak ada data untuk diekspor ke Excel.");
+            const rows = STATE.rekapData.map((r, idx) => ({
+                No: idx + 1,
+                Tanggal: r.tanggal,
+                NIS: r.nis,
+                Nama_Siswa: r.nama,
+                Jenis_Kelamin: r.jenis_kelamin,
+                Kelas: r.kelas,
+                Jam_Masuk: r.jam_masuk || '-',
+                Jam_Pulang: r.jam_pulang || '-',
+                Status: r.status,
+                Status_Pulang: r.status_pulang || '-',
+                Keterangan: r.keterangan || '-'
+            }));
+            const ws = XLSX.utils.json_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Rekap_QR");
+            XLSX.writeFile(wb, `Rekap_Absensi_QR_${getTodayStr()}.xlsx`);
+        }
+
+        function cetakLaporanHarianPDF() {
+            const tgl = document.getElementById('dash-filter-tanggal').value;
+            const kls = document.getElementById('dash-filter-kelas').value;
+            const list = kls ? STATE.absensiHariIni.filter(a => a.kelas === kls) : STATE.absensiHariIni;
+            cetakTabelHTML("LAPORAN PRESENSI HARIAN GERBANG QR", `Tanggal: ${formatTanggalIndo(tgl)} | Kelas: ${kls || 'Semua Kelas'}`, list);
+        }
+
+        function cetakRekapPDF() {
+            if (STATE.rekapData.length === 0) return customAlert("Tidak ada data rekap untuk dicetak.");
+            const blnText = document.getElementById('rekap-filter-bulan').selectedOptions[0].text;
+            const kls = document.getElementById('rekap-filter-kelas').value;
+            cetakTabelHTML("REKAPITULASI PRESENSI GERBANG QR", `Periode: ${blnText} | Kelas: ${kls || 'Semua Kelas'}`, STATE.rekapData);
+        }
+
+        function cetakTabelHTML(judul, subjudul, dataList) {
+            const todayIndo = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            const rowsHtml = dataList.length === 0
+                ? '<tr><td colspan="10" style="padding:12px;">Belum ada data presensi.</td></tr>'
+                : dataList.map((r, i) => `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td>${escapeHTML(r.tanggal)}</td>
+                        <td>${escapeHTML(r.nis)}</td>
+                        <td style="text-align:left;">${escapeHTML(r.nama)}</td>
+                        <td>${escapeHTML(r.jenis_kelamin)}</td>
+                        <td>${escapeHTML(r.kelas)}</td>
+                        <td>${escapeHTML(r.jam_masuk || '-')}</td>
+                        <td>${escapeHTML(r.jam_pulang || '-')}</td>
+                        <td><strong>${escapeHTML(r.status)}</strong></td>
+                        <td style="text-align:left;">${escapeHTML(r.keterangan || r.status_pulang || '-')}</td>
+                    </tr>`).join('');
+
+            const container = document.getElementById('print-container-global');
+            container.innerHTML = `
+                <div style="font-family: 'Times New Roman', serif; color:#000;">
+                    <div style="text-align:center; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 14px;">
+                        <h3 style="margin:0; font-weight:bold;">${escapeHTML(STATE.pengaturan.nama_sekolah.toUpperCase())}</h3>
+                        <h4 style="margin:4px 0 0 0;">${escapeHTML(judul)}</h4>
+                        <div style="font-size:13px; margin-top:4px;">${escapeHTML(subjudul)}</div>
+                    </div>
+                    <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;" border="1">
+                        <thead>
+                            <tr style="background:#eee;">
+                                <th style="padding:5px;">No</th>
+                                <th style="padding:5px;">Tanggal</th>
+                                <th style="padding:5px;">NIS</th>
+                                <th style="padding:5px; text-align:left;">Nama Siswa</th>
+                                <th style="padding:5px;">L/P</th>
+                                <th style="padding:5px;">Kelas</th>
+                                <th style="padding:5px;">Masuk</th>
+                                <th style="padding:5px;">Pulang</th>
+                                <th style="padding:5px;">Status</th>
+                                <th style="padding:5px; text-align:left;">Keterangan</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                    <div style="width: 240px; float:right; text-align:center; margin-top: 28px; font-size: 13px;">
+                        ${todayIndo}<br>Petugas Piket / Admin<br><br><br><br>
+                        <strong>${escapeHTML(STATE.user ? STATE.user.nama : '__________________')}</strong>
+                    </div>
+                </div>`;
+            setTimeout(() => { window.print(); }, 250);
+        }
+
+        // =========================================================================
+        // 5. PENGATURAN & MANAJEMEN AKUN
+        // =========================================================================
+        function loadPengaturanDanUsers() {
+            callBackend('getPengaturan_server', [], (cfg) => {
+                STATE.pengaturan = cfg || STATE.pengaturan;
+                document.getElementById('set-nama-sekolah').value = STATE.pengaturan.nama_sekolah || "";
+                document.getElementById('set-jam-masuk').value = STATE.pengaturan.jam_masuk || "07:15";
+                document.getElementById('set-jam-pulang').value = STATE.pengaturan.jam_pulang || "14:05";
+                document.getElementById('set-cooldown').value = STATE.pengaturan.cooldown_menit || 5;
+            }, "Memuat Pengaturan...");
+
+            callBackend('getUsers_server', [], (users) => {
+                STATE.users = users || [];
+                const tb = document.getElementById('tbody-users');
+                tb.innerHTML = STATE.users.map(u => `
+                    <tr>
+                        <td class="fw-bold">${escapeHTML(u.username)}</td>
+                        <td class="text-start">${escapeHTML(u.nama)}</td>
+                        <td><span class="badge ${u.role === 'Admin' ? 'bg-danger' : 'bg-success'}">${escapeHTML(u.role)}</span></td>
+                        <td>
+                            ${u.username.toLowerCase() !== 'admin'
+                                ? `<button class="btn btn-sm btn-danger" onclick="hapusUser('${escapeHTML(u.username)}')" title="Hapus"><i class="fas fa-trash"></i></button>`
+                                : '<span class="text-muted small">Utama</span>'}
+                        </td>
+                    </tr>`).join('');
+            }, false);
+        }
+
+        function savePengaturan() {
+            const payload = {
+                nama_sekolah: document.getElementById('set-nama-sekolah').value.trim(),
+                jam_masuk: document.getElementById('set-jam-masuk').value,
+                jam_pulang: document.getElementById('set-jam-pulang').value,
+                cooldown_menit: parseInt(document.getElementById('set-cooldown').value, 10) || 5
+            };
+            callBackend('savePengaturan_server', [JSON.stringify(payload)], (res) => {
+                if (res && res.success) {
+                    STATE.pengaturan = payload;
+                    customAlert(res.message);
+                } else {
+                    customAlert(res && res.message ? res.message : "Gagal menyimpan pengaturan.");
+                }
+            }, "Menyimpan Pengaturan...");
+        }
+
+        function openModalUser() {
+            document.getElementById('form-user').reset();
+            document.getElementById('f-user-role').value = 'Peserta';
+            new bootstrap.Modal(document.getElementById('modalUser')).show();
+        }
+
+        function simpanUser() {
+            const obj = {
+                username: document.getElementById('f-user-username').value.trim(),
+                password: document.getElementById('f-user-password').value.trim(),
+                nama: document.getElementById('f-user-nama').value.trim(),
+                role: document.getElementById('f-user-role').value
+            };
+            if (!obj.username || !obj.password || !obj.nama) return customAlert("Lengkapi seluruh data akun.");
+
+            callBackend('saveUser_server', [JSON.stringify(obj)], (res) => {
+                if (res && res.success) {
+                    const inst = bootstrap.Modal.getInstance(document.getElementById('modalUser'));
+                    if (inst) inst.hide();
+                    loadPengaturanDanUsers();
+                    customAlert(res.message);
+                } else {
+                    customAlert(res && res.message ? res.message : "Gagal menyimpan akun.");
+                }
+            }, "Menyimpan Akun...");
+        }
+
+        function hapusUser(username) {
+            customConfirm(`Hapus akun "${username}"?`, () => {
+                callBackend('deleteUser_server', [username], (res) => {
+                    loadPengaturanDanUsers();
+                    customAlert(res && res.message ? res.message : "Akun dihapus.");
+                }, "Menghapus Akun...");
+            });
+        }
+
+        function openModalUbahPassword() {
+            document.getElementById('form-ubah-password').reset();
+            document.getElementById('cp-username-hidden').value = STATE.user ? STATE.user.username : '';
+            new bootstrap.Modal(document.getElementById('modalUbahPassword')).show();
+        }
+
+        function prosesUbahPassword() {
+            const oldP = document.getElementById('cp-old').value.trim();
+            const newP = document.getElementById('cp-new').value.trim();
+            if (!oldP || !newP) return customAlert("Password lama dan baru wajib diisi.");
+
+            callBackend('changeOwnPassword_server', [STATE.user.username, oldP, newP], (res) => {
+                if (res && res.success) {
+                    const inst = bootstrap.Modal.getInstance(document.getElementById('modalUbahPassword'));
+                    if (inst) inst.hide();
+                    customAlert(res.message);
+                } else {
+                    customAlert(res && res.message ? res.message : "Gagal mengubah password.");
+                }
+            }, "Memperbarui Password...");
+        }
+
+        // =========================================================================
+        // BOOTSTRAP APLIKASI SAAT DOM SIAP
+        // =========================================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            initPWAManifestAndSW();
+            updateOnlineStatus();
+
+            const modeBadge = document.getElementById('login-mode-badge');
+            if (IS_PREVIEW) {
+                document.getElementById('preview-badge-login').classList.remove('hidden');
+                if (modeBadge) {
+                    modeBadge.className = 'badge bg-warning bg-opacity-25 text-dark border border-warning rounded-pill px-3 py-1';
+                    modeBadge.innerHTML = '<i class="fas fa-flask me-1"></i> Mode Preview (Dummy)';
+                }
+            } else {
+                if (modeBadge) {
+                    modeBadge.className = 'badge bg-primary bg-opacity-10 text-primary border border-primary rounded-pill px-3 py-1';
+                    modeBadge.innerHTML = '<i class="fas fa-cloud me-1"></i> Terhubung ke GAS API';
+                }
+            }
+
+            setInterval(() => {
+                const clockEl = document.getElementById('jam-digital-gerbang');
+                if (clockEl) {
+                    const now = new Date();
+                    clockEl.innerText = now.toLocaleTimeString('id-ID', { hour12: false });
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
