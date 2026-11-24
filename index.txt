@@ -1133,8 +1133,8 @@
         // 1. UBAH IS_PREVIEW KE false JIKA SUDAH DI-DEPLOY KE GITHUB PAGES / BLOGGER
         // 2. TEMPEL URL WEB APP GOOGLE APPS SCRIPT (/exec) PADA GAS_API_URL
         // =========================================================================
-        const IS_PREVIEW = true; // Set default true untuk Canvas Preview dengan Data Dummy
-        const GAS_API_URL = "PASTE_URL_WEB_APP_GAS_ANDA_DI_SINI";
+        const IS_PREVIEW = false; // Set default true untuk Canvas Preview dengan Data Dummy
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbz4uvpE4ptMenS-1N54LnbGjbdqNz5PyrcfUWA3aQ0vL9MuzhCKOf62XJl7m-0HwoBd/exec";
 
         // =========================================================================
         // INISIALISASI PWA (MANIFEST DINAMIS & SERVICE WORKER AMAN)
