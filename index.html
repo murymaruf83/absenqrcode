@@ -222,6 +222,29 @@
             letter-spacing: 1px;
         }
 
+        /* Import Modal Dropzone & Preview */
+        .import-drop-box {
+            border: 2px dashed #198754;
+            border-radius: 10px;
+            background: #f3fbf7;
+            padding: 16px;
+            transition: all 0.2s ease;
+        }
+        .import-drop-box:hover {
+            background: #e9f7f0;
+        }
+        .import-preview-scroll {
+            max-height: 320px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+        }
+        .import-preview-scroll thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
         /* Loader & Custom Dialog Overlay */
         #loader {
             position: fixed;
@@ -721,7 +744,7 @@
             </div>
 
             <!-- ================================================================= -->
-            <!-- 3. VIEW SISWA & KARTU QR                                          -->
+            <!-- 3. VIEW SISWA & KARTU QR (DENGAN FITUR IMPORT EXCEL / CSV MASSAL) -->
             <!-- ================================================================= -->
             <div id="view-siswa" class="hidden">
                 <div class="card-custom">
@@ -730,6 +753,9 @@
                         <div class="d-flex flex-wrap gap-2">
                             <button class="btn btn-sm btn-dark fw-bold" onclick="cetakKartuQRMassal()">
                                 <i class="fas fa-id-card me-1"></i> Cetak Kartu QR (Filter Aktif)
+                            </button>
+                            <button class="btn btn-sm btn-success fw-bold admin-only" onclick="openModalImportSiswa()">
+                                <i class="fas fa-file-excel me-1"></i> Import Excel/CSV
                             </button>
                             <button class="btn btn-sm btn-primary fw-bold admin-only" onclick="openModalSiswa()">
                                 <i class="fas fa-plus me-1"></i> Tambah Siswa
@@ -904,6 +930,95 @@
     <!-- ========================================================================= -->
     <!-- KUMPULAN MODAL                                                            -->
     <!-- ========================================================================= -->
+
+    <!-- Modal Import Siswa Massal dari Excel / CSV -->
+    <div class="modal fade" id="modalImportSiswa" tabindex="-1" aria-labelledby="modalImportSiswaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title fw-bold" id="modalImportSiswaLabel">
+                        <i class="fas fa-file-excel me-2"></i> Import Siswa Massal (Excel / CSV)
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Langkah 1: Template -->
+                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 bg-light border rounded p-3 mb-3">
+                        <div class="small">
+                            <strong class="text-dark d-block"><i class="fas fa-download text-success me-1"></i> Langkah 1: Gunakan Template Resmi (Opsional)</strong>
+                            <span class="text-muted">Format kolom: <code>NIS</code>, <code>Nama_Siswa</code>, <code>Jenis_Kelamin</code> (L/P), <code>Kelas</code>.</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-success fw-bold text-nowrap" onclick="downloadTemplateSiswaExcel()">
+                            <i class="fas fa-file-download me-1"></i> Unduh Template Excel (.xlsx)
+                        </button>
+                    </div>
+
+                    <!-- Langkah 2: Upload File -->
+                    <div class="import-drop-box mb-3">
+                        <label for="import-file-input" class="form-label fw-bold small text-success mb-1">
+                            <i class="fas fa-upload me-1"></i> Langkah 2: Pilih File Excel atau CSV (.xlsx, .xls, .csv)
+                        </label>
+                        <input type="file" id="import-file-input" class="form-control form-control-sm border-success" accept=".xlsx,.xls,.csv" onchange="handleImportFileSelected(event)">
+                        <div class="form-text mt-1 small text-muted">
+                            Nama kolom otomatis dikenali secara fleksibel: <strong>NIS</strong>, <strong>Nama_Siswa / Nama</strong>, <strong>Jenis_Kelamin / JK / L/P</strong> (L/Laki-laki &rarr; L; P/Perempuan &rarr; P), dan <strong>Kelas</strong>.
+                        </div>
+                    </div>
+
+                    <!-- Langkah 3: Penanganan Duplikat NIS -->
+                    <div class="mb-3">
+                        <label for="import-duplicate-mode" class="form-label fw-bold small mb-1">
+                            <i class="fas fa-copy text-primary me-1"></i> Langkah 3: Penanganan NIS yang Sudah Terdaftar di Database
+                        </label>
+                        <select id="import-duplicate-mode" class="form-select form-select-sm border-primary fw-semibold" onchange="revalidateImportData()">
+                            <option value="skip" selected>Lewati NIS Duplikat (Aman, tidak mengubah data lama)</option>
+                            <option value="update">Perbarui / Timpa Data Siswa yang Sudah Ada (Update Kelas, Nama, atau JK massal)</option>
+                        </select>
+                    </div>
+
+                    <!-- Area Pratinjau & Validasi Otomatis -->
+                    <div id="import-preview-section" class="hidden">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                            <span class="fw-bold small text-dark"><i class="fas fa-list-check text-primary me-1"></i> Pratinjau &amp; Validasi Otomatis</span>
+                            <div class="d-flex flex-wrap gap-1">
+                                <span class="badge bg-secondary">Total Dibaca: <span id="imp-stat-total">0</span></span>
+                                <span class="badge bg-success">Siap Diimport: <span id="imp-stat-ready">0</span></span>
+                                <span class="badge bg-warning text-dark">Dilewati: <span id="imp-stat-skip">0</span></span>
+                                <span class="badge bg-danger">Error: <span id="imp-stat-error">0</span></span>
+                            </div>
+                        </div>
+
+                        <div id="import-limit-note" class="alert alert-info py-1 px-2 small mb-2 hidden">
+                            <i class="fas fa-info-circle me-1"></i> Menampilkan 200 baris pertama untuk pratinjau cepat. Seluruh baris yang valid tetap akan ikut diimport.
+                        </div>
+
+                        <div class="import-preview-scroll">
+                            <table class="table table-bordered table-hover table-sm align-middle text-center mb-0 small">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th width="6%">Baris</th>
+                                        <th>NIS</th>
+                                        <th class="text-start">Nama Siswa</th>
+                                        <th>JK</th>
+                                        <th>Kelas</th>
+                                        <th>Status Validasi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-import-preview">
+                                    <tr><td colspan="6" class="text-muted py-3">Belum ada file dipilih.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light d-flex justify-content-between">
+                    <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" id="btn-proses-import" class="btn btn-success fw-bold" onclick="prosesImportSiswaMassal()" disabled>
+                        <i class="fas fa-cloud-upload-alt me-1"></i> Proses Import (0 Siswa)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal Konfirmasi Ijin Pulang Awal -->
     <div class="modal fade" id="modalAlasanIjin" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
@@ -1133,14 +1248,18 @@
         // 1. UBAH IS_PREVIEW KE false JIKA SUDAH DI-DEPLOY KE GITHUB PAGES / BLOGGER
         // 2. TEMPEL URL WEB APP GOOGLE APPS SCRIPT (/exec) PADA GAS_API_URL
         // =========================================================================
-        const IS_PREVIEW = false; // Set default true untuk Canvas Preview dengan Data Dummy
-        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbz4uvpE4ptMenS-1N54LnbGjbdqNz5PyrcfUWA3aQ0vL9MuzhCKOf62XJl7m-0HwoBd/exec";
+        const IS_PREVIEW = true; // UBAH KE false JIKA SUDAH DI-DEPLOY KE GITHUB PAGES / BLOGGER
+        const GAS_API_URL = "https://script.google.com/macros/s/GANTI_DENGAN_URL_DEPLOY_GAS_ANDA/exec";
 
         // =========================================================================
         // INISIALISASI PWA (MANIFEST DINAMIS & SERVICE WORKER AMAN)
         // =========================================================================
         let deferredPrompt = null;
 
+        /**
+         * Menyuntikkan Web App Manifest secara dinamis dan mendaftarkan Service Worker
+         * untuk mendukung instalasi PWA (Add to Home Screen / Standalone App).
+         */
         function initPWAManifestAndSW() {
             try {
                 const manifestObj = {
@@ -1177,11 +1296,10 @@
                 console.warn("Gagal menyuntikkan manifest PWA:", e);
             }
 
-            // Registrasi Service Worker aman (hanya berjalan di HTTPS / localhost)
             try {
                 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
                     const swCode = `
-                        const CACHE_NAME = 'absensi-qr-pro-v1';
+                        const CACHE_NAME = 'absensi-qr-pro-v2';
                         self.addEventListener('install', (event) => {
                             self.skipWaiting();
                         });
@@ -1198,12 +1316,11 @@
                     const swBlob = new Blob([swCode], { type: 'application/javascript' });
                     const swUrl = URL.createObjectURL(swBlob);
                     navigator.serviceWorker.register(swUrl).catch(() => {
-                        // Fallback jika browser menolak SW berbasis Blob, coba ./sw.js jika ada
                         navigator.serviceWorker.register('./sw.js').catch(() => {});
                     });
                 }
             } catch (e) {
-                // Abaikan error SW di lingkungan preview/sandbox
+                // Abaikan bila dijalankan pada preview sandbox tanpa dukungan Service Worker
             }
         }
 
@@ -1293,7 +1410,9 @@
             lastScanTimestamp: 0,
             html5QrCode: null,
             cameraRunning: false,
-            availableCameras: []
+            availableCameras: [],
+            importRawRows: [],
+            importValidatedRows: []
         };
 
         function showLoader(msg = "Memproses Data...") {
@@ -1305,7 +1424,7 @@
         }
 
         function escapeHTML(str) {
-            return String(str || '')
+            return String(str === null || str === undefined ? '' : str)
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
@@ -1400,19 +1519,23 @@
         async function callBackend(funcName, argsArray, onSuccess, customMsg) {
             if (customMsg !== false) showLoader(customMsg || "Memproses Data...");
 
-            // 1. Mode Preview (Data Dummy)
+            // 1. Mode Preview (Data Dummy lokal)
             if (IS_PREVIEW) {
                 setTimeout(() => {
                     hideLoader();
-                    const res = handleDummyBackend(funcName, argsArray);
+                    const res = handleDummyBackend(funcName, argsArray || []);
                     if (onSuccess) onSuccess(res);
                 }, 180);
                 return;
             }
 
-            // 2. Mode Standalone Opsi A: Fetch JSON ke Google Apps Script Web App (doPost)
-            // Menggunakan text/plain;charset=utf-8 agar tidak memicu CORS preflight OPTIONS
-            if (GAS_API_URL && GAS_API_URL.startsWith('https://script.google.com/macros/s/')) {
+            // 2. Mode Standalone Opsi A: Fetch JSON POST ke Google Apps Script Web App (doPost)
+            // Header text/plain;charset=utf-8 mencegah CORS preflight OPTIONS yang tidak didukung GAS
+            const isValidGasUrl = GAS_API_URL &&
+                GAS_API_URL.startsWith('https://script.google.com/macros/s/') &&
+                !GAS_API_URL.includes('GANTI_DENGAN_URL_DEPLOY_GAS_ANDA');
+
+            if (isValidGasUrl) {
                 try {
                     const response = await fetch(GAS_API_URL, {
                         method: 'POST',
@@ -1461,7 +1584,7 @@
                 return;
             }
 
-            // 4. Konfigurasi belum diisi
+            // 4. Konfigurasi GAS_API_URL belum diganti
             hideLoader();
             customAlert("URL API Google Apps Script (GAS_API_URL) belum diatur!\n\nSilakan tempel URL Web App (/exec) Anda pada variabel GAS_API_URL di bagian atas kode script, atau ubah IS_PREVIEW menjadi true untuk pengujian lokal.");
         }
@@ -1599,6 +1722,59 @@
                     obj.nis = nisBaru;
                     DUMMY_DB.siswa.push(obj);
                     return { success: true, message: "Siswa baru berhasil ditambahkan." };
+                }
+                case 'importSiswaMassal_server': {
+                    const list = JSON.parse(args[0] || '[]');
+                    const mode = String(args[1] || 'skip').toLowerCase();
+                    let added = 0;
+                    let updated = 0;
+                    let skipped = 0;
+                    const baseTime = Date.now();
+
+                    list.forEach((item, idx) => {
+                        const nis = String(item.nis || '').trim().toUpperCase();
+                        const nama = String(item.nama || '').trim();
+                        const jk = String(item.jenis_kelamin || '').trim().toUpperCase();
+                        const kelas = String(item.kelas || '').trim();
+
+                        if (!nis || !nama || !kelas || (jk !== 'L' && jk !== 'P')) {
+                            skipped++;
+                            return;
+                        }
+
+                        const existingIdx = DUMMY_DB.siswa.findIndex(s => String(s.nis).trim().toUpperCase() === nis);
+                        if (existingIdx >= 0) {
+                            if (mode === 'update') {
+                                DUMMY_DB.siswa[existingIdx] = {
+                                    ...DUMMY_DB.siswa[existingIdx],
+                                    nis: nis,
+                                    nama: nama,
+                                    jenis_kelamin: jk,
+                                    kelas: kelas
+                                };
+                                updated++;
+                            } else {
+                                skipped++;
+                            }
+                        } else {
+                            DUMMY_DB.siswa.push({
+                                id_siswa: "S" + (baseTime + idx) + Math.floor(Math.random() * 100),
+                                nis: nis,
+                                nama: nama,
+                                jenis_kelamin: jk,
+                                kelas: kelas
+                            });
+                            added++;
+                        }
+                    });
+
+                    return {
+                        success: true,
+                        added: added,
+                        updated: updated,
+                        skipped: skipped,
+                        message: `Import Massal Selesai!\n• Ditambahkan: ${added} siswa\n• Diperbarui: ${updated} siswa\n• Dilewati: ${skipped} siswa`
+                    };
                 }
                 case 'deleteSiswa_server': {
                     DUMMY_DB.siswa = DUMMY_DB.siswa.filter(s => s.id_siswa !== args[0]);
@@ -1867,7 +2043,7 @@
         }
 
         // =========================================================================
-        // 2. SCAN QR (PERBAIKAN KAMERA LAPTOP/HP, FALLBACK CERDAS & SCAN FOTO QR)
+        // 2. SCAN QR (KAMERA LAPTOP/HP, FALLBACK CERDAS & SCAN FOTO QR)
         // =========================================================================
         function initScanPage() {
             document.getElementById('scan-nama-sekolah').innerText = STATE.pengaturan.nama_sekolah || "Sekolah";
@@ -1877,8 +2053,7 @@
 
             if (IS_PREVIEW) document.getElementById('preview-simulasi-panel').classList.remove('hidden');
 
-            // PENTING: Tidak memanggil getUserMedia()/getCameras() secara otomatis di sini
-            // agar tidak ditolak browser sebelum ada klik tombol (user gesture).
+            // Tidak memanggil getUserMedia()/getCameras() secara otomatis saat halaman baru dibuka
             if (STATE.availableCameras.length === 0) {
                 const sel = document.getElementById('select-camera-device');
                 if (sel) sel.innerHTML = '<option value="">Klik "Mulai Kamera" atau tombol Deteksi...</option>';
@@ -1899,8 +2074,7 @@
         }
 
         /**
-         * Memindai perangkat kamera fisik hanya saat dipicu user gesture
-         * (tombol Deteksi atau tombol Mulai Kamera).
+         * Memindai perangkat kamera fisik saat dipicu user gesture (tombol Deteksi atau Mulai Kamera).
          */
         async function loadAvailableLaptopCameras(showFeedback = false) {
             const sel = document.getElementById('select-camera-device');
@@ -1975,10 +2149,11 @@
         }
 
         /**
-         * Menyalakan Live QR Scanner dengan rantai fallback cerdas:
-         * 1. Device ID terpilih di dropdown
-         * 2. { facingMode: "user" } (optimal untuk webcam laptop)
-         * 3. { facingMode: "environment" } (optimal untuk kamera belakang HP)
+         * Menyalakan Live QR Scanner dengan rantai fallback berurutan:
+         * 1. cameraId terpilih di dropdown
+         * 2. kamera pertama terdeteksi (jika berbeda dengan pilihan dropdown)
+         * 3. { facingMode: "user" }
+         * 4. { facingMode: "environment" }
          */
         async function startQRScanner() {
             if (STATE.cameraRunning) return;
@@ -1990,14 +2165,12 @@
             btnStart.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menghubungkan...';
             btnStart.disabled = true;
 
-            // Bersihkan instance lama jika masih tersisa
             if (STATE.html5QrCode) {
                 try { await STATE.html5QrCode.stop(); } catch (e) {}
                 try { STATE.html5QrCode.clear(); } catch (e) {}
                 STATE.html5QrCode = null;
             }
 
-            // Deteksi kamera saat klik pertama jika daftar kamera masih kosong
             if (STATE.availableCameras.length === 0) {
                 await loadAvailableLaptopCameras(false);
             }
@@ -2006,10 +2179,13 @@
             const selectedDeviceId = sel ? sel.value : "";
             const selectedLabel = (sel && sel.selectedOptions[0] ? sel.selectedOptions[0].text : "").toLowerCase();
 
-            // Siapkan daftar target berurutan (Smart Fallback Chain)
+            // Rantai Fallback Target Kamera
             const candidateTargets = [];
             if (selectedDeviceId) {
-                candidateTargets.push({ type: 'deviceId', value: selectedDeviceId });
+                candidateTargets.push({ type: 'selectedId', value: selectedDeviceId });
+            }
+            if (STATE.availableCameras.length > 0 && STATE.availableCameras[0].id && STATE.availableCameras[0].id !== selectedDeviceId) {
+                candidateTargets.push({ type: 'firstDetectedId', value: STATE.availableCameras[0].id });
             }
             candidateTargets.push({ type: 'facingUser', value: { facingMode: "user" } });
             candidateTargets.push({ type: 'facingEnv', value: { facingMode: "environment" } });
@@ -2041,7 +2217,6 @@
                     } catch (e) {}
                     STATE.html5QrCode = null;
 
-                    // Jika error jelas berasal dari blokir Permissions-Policy atau izin ditolak permanen, hentikan percobaan fallback
                     const msgLow = String(err && err.message ? err.message : err).toLowerCase();
                     if (msgLow.includes('permissions policy') || msgLow.includes('notallowederror') || msgLow.includes('permission denied')) {
                         break;
@@ -2058,7 +2233,6 @@
                 document.getElementById('btn-start-cam').classList.add('hidden');
                 document.getElementById('btn-stop-cam').classList.remove('hidden');
 
-                // Aktifkan mode cermin otomatis untuk kamera depan / webcam laptop
                 const wrap = document.getElementById('qr-reader-wrapper');
                 const isFrontCam = activeTargetType === 'facingUser' || selectedLabel.includes('integrated') || selectedLabel.includes('front') || selectedLabel.includes('webcam');
                 if (wrap) {
@@ -2078,7 +2252,6 @@
             const errMsg = (err && err.message) ? String(err.message) : String(err || 'Tidak diketahui');
             const fullLow = (errName + ' ' + errMsg).toLowerCase();
 
-            // Cek apakah iframe saat ini memblokir Permissions-Policy camera
             let blockedByPolicy = fullLow.includes('permissions policy') || fullLow.includes('not allowed in this document');
             try {
                 if (document.permissionsPolicy && typeof document.permissionsPolicy.allowsFeature === 'function') {
@@ -2144,9 +2317,6 @@
             }
         }
 
-        /**
-         * Cadangan Scan QR dari File Gambar / Kamera Sistem
-         */
         function triggerQRFileUpload() {
             const inp = document.getElementById('input-qr-file');
             if (!inp) return;
@@ -2422,7 +2592,7 @@
         }
 
         // =========================================================================
-        // 3. DATA SISWA & KARTU QR
+        // 3. DATA SISWA, KARTU QR & IMPORT EXCEL / CSV MASSAL
         // =========================================================================
         function loadSiswaData() {
             callBackend('getSiswa_server', [], (data) => {
@@ -2519,6 +2689,356 @@
                     customAlert(res && res.message ? res.message : "Siswa dihapus.");
                 }, "Menghapus Siswa...");
             });
+        }
+
+        // --- FITUR IMPORT EXCEL / CSV MASSAL ---
+
+        /**
+         * Membuka modal Import Excel/CSV dan mereset pratinjau sebelumnya.
+         */
+        function openModalImportSiswa() {
+            STATE.importRawRows = [];
+            STATE.importValidatedRows = [];
+
+            const fileInp = document.getElementById('import-file-input');
+            if (fileInp) fileInp.value = '';
+            document.getElementById('import-duplicate-mode').value = 'skip';
+            document.getElementById('import-preview-section').classList.add('hidden');
+            document.getElementById('import-limit-note').classList.add('hidden');
+            document.getElementById('tbody-import-preview').innerHTML = '<tr><td colspan="6" class="text-muted py-3">Belum ada file dipilih.</td></tr>';
+            updateImportActionSummary(0, 0, 0, 0);
+
+            new bootstrap.Modal(document.getElementById('modalImportSiswa')).show();
+        }
+
+        /**
+         * Membuat dan mengunduh file Template_Import_Siswa.xlsx menggunakan SheetJS.
+         */
+        function downloadTemplateSiswaExcel() {
+            if (typeof XLSX === 'undefined') {
+                return customAlert("Pustaka SheetJS (XLSX) belum termuat. Periksa sambungan internet Anda.");
+            }
+            const sampleRows = [
+                { NIS: "2601011", Nama_Siswa: "Alya Putri Ramadhani", Jenis_Kelamin: "P", Kelas: "X-1" },
+                { NIS: "2601012", Nama_Siswa: "Bagas Prakoso", Jenis_Kelamin: "L", Kelas: "X-1" },
+                { NIS: "2601013", Nama_Siswa: "Citra Dewi Lestari", Jenis_Kelamin: "P", Kelas: "X-2" }
+            ];
+            const ws = XLSX.utils.json_to_sheet(sampleRows, { header: ["NIS", "Nama_Siswa", "Jenis_Kelamin", "Kelas"] });
+            ws['!cols'] = [
+                { wch: 15 },
+                { wch: 28 },
+                { wch: 16 },
+                { wch: 12 }
+            ];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Template_Siswa");
+            XLSX.writeFile(wb, "Template_Import_Siswa.xlsx");
+        }
+
+        /**
+         * Normalisasi nama header agar fleksibel terhadap kapitalisasi, spasi, garis bawah, atau tanda baca.
+         */
+        function normalizeHeaderKey(headerVal) {
+            return String(headerVal || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+        }
+
+        /**
+         * Normalisasi teks Jenis Kelamin menjadi 'L' atau 'P'. Mengembalikan '' jika tidak valid.
+         */
+        function normalizeJenisKelamin(rawJk) {
+            const clean = String(rawJk || '').trim().toLowerCase().replace(/[^a-z]/g, '');
+            if (['l', 'laki', 'lakilaki', 'pria', 'cowok', 'male', 'm', 'lk'].includes(clean)) return 'L';
+            if (['p', 'perempuan', 'wanita', 'cewek', 'female', 'f', 'w', 'pr'].includes(clean)) return 'P';
+            return '';
+        }
+
+        /**
+         * Membaca file Excel (.xlsx/.xls) atau CSV dari input file menggunakan FileReader & SheetJS.
+         */
+        function handleImportFileSelected(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) {
+                STATE.importRawRows = [];
+                STATE.importValidatedRows = [];
+                document.getElementById('import-preview-section').classList.add('hidden');
+                updateImportActionSummary(0, 0, 0, 0);
+                return;
+            }
+
+            if (typeof XLSX === 'undefined') {
+                return customAlert("Pustaka pembaca Excel (XLSX) belum termuat. Periksa koneksi internet Anda.");
+            }
+
+            showLoader("Membaca & Memvalidasi File...");
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    if (!firstSheetName) {
+                        throw new Error("File tidak memiliki sheet/lembar kerja yang dapat dibaca.");
+                    }
+
+                    const sheet = workbook.Sheets[firstSheetName];
+                    const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', blankrows: false });
+
+                    if (!matrix || matrix.length === 0) {
+                        throw new Error("File kosong. Pastikan terdapat baris data siswa di lembar pertama.");
+                    }
+
+                    // Deteksi baris header fleksibel (cari pada 5 baris pertama)
+                    const nisAliases = ['nis', 'nisn', 'kodeqr', 'nokartu', 'nomorinduk', 'nomorinduksiswa'];
+                    const namaAliases = ['namasiswa', 'nama', 'namalengkap', 'namapesertadidik', 'pesertadidik', 'studentname', 'fullname'];
+                    const jkAliases = ['jeniskelamin', 'jk', 'lp', 'kelamin', 'gender', 'sex'];
+                    const kelasAliases = ['kelas', 'rombel', 'rombonganbelajar', 'class', 'tingkat'];
+
+                    let headerRowIdx = -1;
+                    let colMap = { nis: -1, nama: -1, jk: -1, kelas: -1 };
+
+                    const scanLimit = Math.min(matrix.length, 5);
+                    for (let r = 0; r < scanLimit; r++) {
+                        const row = matrix[r] || [];
+                        const tempMap = { nis: -1, nama: -1, jk: -1, kelas: -1 };
+                        row.forEach((cell, cIdx) => {
+                            const key = normalizeHeaderKey(cell);
+                            if (!key) return;
+                            if (tempMap.nis === -1 && nisAliases.includes(key)) tempMap.nis = cIdx;
+                            else if (tempMap.nama === -1 && namaAliases.includes(key)) tempMap.nama = cIdx;
+                            else if (tempMap.jk === -1 && jkAliases.includes(key)) tempMap.jk = cIdx;
+                            else if (tempMap.kelas === -1 && kelasAliases.includes(key)) tempMap.kelas = cIdx;
+                        });
+
+                        const matchedCount = [tempMap.nis, tempMap.nama, tempMap.jk, tempMap.kelas].filter(i => i !== -1).length;
+                        if (matchedCount >= 2) {
+                            headerRowIdx = r;
+                            colMap = tempMap;
+                            break;
+                        }
+                    }
+
+                    // Jika header tidak terdeteksi jelas, pakai urutan standar kolom 0..3
+                    let dataStartIdx = headerRowIdx >= 0 ? headerRowIdx + 1 : 0;
+                    if (headerRowIdx === -1) {
+                        colMap = { nis: 0, nama: 1, jk: 2, kelas: 3 };
+                    }
+
+                    const parsedRows = [];
+                    for (let r = dataStartIdx; r < matrix.length; r++) {
+                        const row = matrix[r] || [];
+                        const rawNis = colMap.nis >= 0 ? row[colMap.nis] : '';
+                        const rawNama = colMap.nama >= 0 ? row[colMap.nama] : '';
+                        const rawJk = colMap.jk >= 0 ? row[colMap.jk] : '';
+                        const rawKelas = colMap.kelas >= 0 ? row[colMap.kelas] : '';
+
+                        // Lewati baris yang benar-benar kosong seluruhnya
+                        const isAllEmpty = [rawNis, rawNama, rawJk, rawKelas].every(v => String(v === null || v === undefined ? '' : v).trim() === '');
+                        if (isAllEmpty) continue;
+
+                        parsedRows.push({
+                            rowNumber: r + 1,
+                            nis: String(rawNis === null || rawNis === undefined ? '' : rawNis).trim().toUpperCase(),
+                            nama: String(rawNama === null || rawNama === undefined ? '' : rawNama).trim(),
+                            rawJk: String(rawJk === null || rawJk === undefined ? '' : rawJk).trim(),
+                            jenis_kelamin: normalizeJenisKelamin(rawJk),
+                            kelas: String(rawKelas === null || rawKelas === undefined ? '' : rawKelas).trim()
+                        });
+                    }
+
+                    if (parsedRows.length === 0) {
+                        throw new Error("Tidak ditemukan baris data siswa setelah baris header.");
+                    }
+
+                    STATE.importRawRows = parsedRows;
+                    hideLoader();
+                    revalidateImportData();
+                } catch (err) {
+                    hideLoader();
+                    STATE.importRawRows = [];
+                    STATE.importValidatedRows = [];
+                    document.getElementById('import-preview-section').classList.add('hidden');
+                    updateImportActionSummary(0, 0, 0, 0);
+                    customAlert("Gagal membaca file Excel/CSV:\n" + (err && err.message ? err.message : String(err)));
+                }
+            };
+
+            reader.onerror = function () {
+                hideLoader();
+                customAlert("Terjadi kesalahan saat membaca file dari perangkat Anda.");
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        /**
+         * Memvalidasi ulang seluruh baris hasil parsing berdasarkan mode penanganan duplikat
+         * (skip/update) dan data STATE.siswa terbaru, lalu merender tabel pratinjau.
+         */
+        function revalidateImportData() {
+            if (!STATE.importRawRows || STATE.importRawRows.length === 0) {
+                document.getElementById('import-preview-section').classList.add('hidden');
+                updateImportActionSummary(0, 0, 0, 0);
+                return;
+            }
+
+            const mode = document.getElementById('import-duplicate-mode').value || 'skip';
+            const existingNisSet = new Set(STATE.siswa.map(s => String(s.nis || '').trim().toUpperCase()));
+            const seenInFileSet = new Set();
+
+            let countTotal = STATE.importRawRows.length;
+            let countReady = 0;
+            let countSkip = 0;
+            let countError = 0;
+
+            STATE.importValidatedRows = STATE.importRawRows.map(item => {
+                const errors = [];
+                if (!item.nis) errors.push("NIS kosong");
+                if (!item.nama) errors.push("Nama kosong");
+                if (!item.kelas) errors.push("Kelas kosong");
+                if (!item.jenis_kelamin) {
+                    errors.push(item.rawJk ? `JK "${item.rawJk}" tidak valid (harus L/P)` : "JK kosong");
+                }
+
+                if (errors.length > 0) {
+                    countError++;
+                    return {
+                        ...item,
+                        validationStatus: 'ERROR',
+                        statusBadge: `<span class="badge bg-danger">Error: ${escapeHTML(errors.join(', '))}</span>`,
+                        willImport: false
+                    };
+                }
+
+                if (seenInFileSet.has(item.nis)) {
+                    countSkip++;
+                    return {
+                        ...item,
+                        validationStatus: 'DUPLICATE_FILE',
+                        statusBadge: '<span class="badge bg-warning text-dark">Duplikat di File</span>',
+                        willImport: false
+                    };
+                }
+                seenInFileSet.add(item.nis);
+
+                if (existingNisSet.has(item.nis)) {
+                    if (mode === 'update') {
+                        countReady++;
+                        return {
+                            ...item,
+                            validationStatus: 'UPDATE',
+                            statusBadge: '<span class="badge bg-primary">Akan Diperbarui</span>',
+                            willImport: true
+                        };
+                    } else {
+                        countSkip++;
+                        return {
+                            ...item,
+                            validationStatus: 'SKIP',
+                            statusBadge: '<span class="badge bg-warning text-dark">Dilewati (Sudah Ada)</span>',
+                            willImport: false
+                        };
+                    }
+                }
+
+                countReady++;
+                return {
+                    ...item,
+                    validationStatus: 'NEW',
+                    statusBadge: '<span class="badge bg-success">Baru</span>',
+                    willImport: true
+                };
+            });
+
+            updateImportActionSummary(countTotal, countReady, countSkip, countError);
+
+            const MAX_PREVIEW = 200;
+            const limitNote = document.getElementById('import-limit-note');
+            if (STATE.importValidatedRows.length > MAX_PREVIEW) {
+                limitNote.classList.remove('hidden');
+            } else {
+                limitNote.classList.add('hidden');
+            }
+
+            const previewSlice = STATE.importValidatedRows.slice(0, MAX_PREVIEW);
+            const tb = document.getElementById('tbody-import-preview');
+            tb.innerHTML = previewSlice.map(r => {
+                const rowClass = r.validationStatus === 'ERROR'
+                    ? 'table-danger'
+                    : (r.validationStatus === 'SKIP' || r.validationStatus === 'DUPLICATE_FILE'
+                        ? 'table-warning'
+                        : (r.validationStatus === 'UPDATE' ? 'table-info' : ''));
+                return `
+                    <tr class="${rowClass}">
+                        <td>${r.rowNumber}</td>
+                        <td class="fw-bold">${escapeHTML(r.nis || '-')}</td>
+                        <td class="text-start">${escapeHTML(r.nama || '-')}</td>
+                        <td>${escapeHTML(r.jenis_kelamin || r.rawJk || '-')}</td>
+                        <td>${escapeHTML(r.kelas || '-')}</td>
+                        <td>${r.statusBadge}</td>
+                    </tr>`;
+            }).join('');
+
+            document.getElementById('import-preview-section').classList.remove('hidden');
+        }
+
+        function updateImportActionSummary(total, ready, skip, err) {
+            document.getElementById('imp-stat-total').innerText = total;
+            document.getElementById('imp-stat-ready').innerText = ready;
+            document.getElementById('imp-stat-skip').innerText = skip;
+            document.getElementById('imp-stat-error').innerText = err;
+
+            const btn = document.getElementById('btn-proses-import');
+            if (btn) {
+                btn.disabled = ready <= 0;
+                btn.innerHTML = `<i class="fas fa-cloud-upload-alt me-1"></i> Proses Import (${ready} Siswa)`;
+            }
+        }
+
+        /**
+         * Mengirim seluruh baris siswa valid ke backend (importSiswaMassal_server).
+         */
+        function prosesImportSiswaMassal() {
+            const rowsToImport = STATE.importValidatedRows
+                .filter(r => r.willImport)
+                .map(r => ({
+                    nis: r.nis,
+                    nama: r.nama,
+                    jenis_kelamin: r.jenis_kelamin,
+                    kelas: r.kelas
+                }));
+
+            if (rowsToImport.length === 0) {
+                return customAlert("Tidak ada data siswa yang siap diimport.");
+            }
+
+            const duplicateMode = document.getElementById('import-duplicate-mode').value || 'skip';
+            const modeLabel = duplicateMode === 'update' ? 'Perbarui data NIS yang sudah ada' : 'Lewati NIS duplikat';
+
+            customConfirm(
+                `Anda akan mengimport ${rowsToImport.length} data siswa ke database.\nMode duplikat: ${modeLabel}.\n\nLanjutkan proses import?`,
+                () => {
+                    callBackend(
+                        'importSiswaMassal_server',
+                        [JSON.stringify(rowsToImport), duplicateMode],
+                        (res) => {
+                            const modalEl = document.getElementById('modalImportSiswa');
+                            const inst = bootstrap.Modal.getInstance(modalEl);
+                            if (inst) inst.hide();
+
+                            if (res && res.success) {
+                                loadSiswaData();
+                                const detailMsg = res.message ||
+                                    `Import Massal Selesai!\n• Ditambahkan: ${res.added || 0} siswa\n• Diperbarui: ${res.updated || 0} siswa\n• Dilewati: ${res.skipped || 0} siswa`;
+                                customAlert(detailMsg);
+                            } else {
+                                customAlert(res && res.message ? res.message : "Proses import gagal dilakukan.");
+                            }
+                        },
+                        `Mengimport ${rowsToImport.length} Data Siswa...`
+                    );
+                }
+            );
         }
 
         function lihatKartuQR(idSiswa) {
