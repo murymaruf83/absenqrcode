@@ -890,9 +890,18 @@
                 <div class="card-custom">
                     <h5 class="fw-bold text-primary mb-3"><i class="fas fa-table me-2"></i> Rekapitulasi Presensi QR Gerbang</h5>
                     <div class="row g-2 align-items-end mb-3 bg-light p-3 rounded border">
-                        <div class="col-6 col-md-3">
+                        <div class="col-12 col-md-3">
+                            <label for="rekap-filter-tanggal" class="form-label small fw-bold">Tanggal (Opsional)</label>
+                            <div class="input-group input-group-sm">
+                                <input type="date" id="rekap-filter-tanggal" class="form-control border-primary" onchange="onRekapTanggalChange()">
+                                <button type="button" class="btn btn-outline-secondary" onclick="resetRekapTanggal()" title="Hapus Filter Tanggal">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-2">
                             <label for="rekap-filter-bulan" class="form-label small fw-bold">Bulan</label>
-                            <select id="rekap-filter-bulan" class="form-select form-select-sm border-primary">
+                            <select id="rekap-filter-bulan" class="form-select form-select-sm border-primary" onchange="onRekapBulanChange()">
                                 <option value="all">Semua Bulan</option>
                                 <option value="01">Januari</option>
                                 <option value="02">Februari</option>
@@ -908,20 +917,20 @@
                                 <option value="12">Desember</option>
                             </select>
                         </div>
-                        <div class="col-6 col-md-3">
+                        <div class="col-6 col-md-2">
                             <label for="rekap-filter-kelas" class="form-label small fw-bold">Kelas</label>
                             <select id="rekap-filter-kelas" class="form-select form-select-sm border-primary">
                                 <option value="">Semua Kelas</option>
                             </select>
                         </div>
-                        <div class="col-12 col-md-6 d-flex gap-2">
-                            <button class="btn btn-sm btn-primary fw-bold flex-fill" onclick="loadRekapData()">
+                        <div class="col-12 col-md-5 d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-primary fw-bold flex-fill" onclick="loadRekapData()">
                                 <i class="fas fa-search me-1"></i> Tampilkan
                             </button>
-                            <button class="btn btn-sm btn-success fw-bold flex-fill" onclick="exportRekapExcel()">
+                            <button type="button" class="btn btn-sm btn-success fw-bold flex-fill" onclick="exportRekapExcel()">
                                 <i class="fas fa-file-excel me-1"></i> Excel
                             </button>
-                            <button class="btn btn-sm btn-danger fw-bold flex-fill" onclick="cetakRekapPDF()">
+                            <button type="button" class="btn btn-sm btn-danger fw-bold flex-fill" onclick="cetakRekapPDF()">
                                 <i class="fas fa-file-pdf me-1"></i> Cetak PDF
                             </button>
                         </div>
@@ -3977,17 +3986,45 @@
         // =========================================================================
         // 4. REKAP & LAPORAN (EXCEL & PDF)
         // =========================================================================
-        function initRekapPage() {
+       function initRekapPage() {
             const blnNow = String(new Date().getMonth() + 1).padStart(2, '0');
             document.getElementById('rekap-filter-bulan').value = blnNow;
+            const tglEl = document.getElementById('rekap-filter-tanggal');
+            if (tglEl) tglEl.value = '';
+            loadRekapData();
+        }
+
+        function onRekapBulanChange() {
+            const tglEl = document.getElementById('rekap-filter-tanggal');
+            if (tglEl) tglEl.value = '';
+        }
+
+        function onRekapTanggalChange() {
+            const tgl = document.getElementById('rekap-filter-tanggal').value;
+            if (tgl && tgl.length >= 7) {
+                document.getElementById('rekap-filter-bulan').value = tgl.substring(5, 7);
+            }
+        }
+
+        function resetRekapTanggal() {
+            const tglEl = document.getElementById('rekap-filter-tanggal');
+            if (tglEl) tglEl.value = '';
             loadRekapData();
         }
 
         function loadRekapData() {
             const bln = document.getElementById('rekap-filter-bulan').value;
             const kls = document.getElementById('rekap-filter-kelas').value;
-            callBackend('getRekap_server', [bln, kls], (res) => {
-                STATE.rekapData = (res && res.absensi) ? res.absensi : [];
+            const tglEl = document.getElementById('rekap-filter-tanggal');
+            const tgl = tglEl ? tglEl.value : '';
+            const targetBln = (tgl && tgl.length >= 7) ? tgl.substring(5, 7) : bln;
+
+            callBackend('getRekap_server', [targetBln, kls], (res) => {
+                let rows = (res && res.absensi) ? res.absensi : [];
+                if (tgl) {
+                    rows = rows.filter(r => String(r.tanggal || '').trim() === tgl);
+                }
+                STATE.rekapData = rows;
                 renderTableRekap();
             }, "Memuat Rekap...");
         }
@@ -3995,7 +4032,7 @@
         function renderTableRekap() {
             const tb = document.getElementById('tbody-rekap');
             if (STATE.rekapData.length === 0) {
-                tb.innerHTML = '<tr><td colspan="11" class="text-muted py-4">Tidak ada data presensi pada periode/kelas ini.</td></tr>';
+                tb.innerHTML = '<tr><td colspan="11" class="text-muted py-4">Tidak ada data presensi pada tanggal/periode dan kelas ini.</td></tr>';
                 return;
             }
             tb.innerHTML = STATE.rekapData.map((r, idx) => `
@@ -4032,7 +4069,8 @@
             const ws = XLSX.utils.json_to_sheet(rows);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Rekap_QR");
-            XLSX.writeFile(wb, `Rekap_Absensi_QR_${getTodayStr()}.xlsx`);
+            const tgl = document.getElementById('rekap-filter-tanggal').value;
+            XLSX.writeFile(wb, `Rekap_Absensi_QR_${tgl || getTodayStr()}.xlsx`);
         }
 
         function cetakLaporanHarianPDF() {
@@ -4044,9 +4082,11 @@
 
         function cetakRekapPDF() {
             if (STATE.rekapData.length === 0) return customAlert("Tidak ada data rekap untuk dicetak.");
+            const tgl = document.getElementById('rekap-filter-tanggal').value;
             const blnText = document.getElementById('rekap-filter-bulan').selectedOptions[0].text;
             const kls = document.getElementById('rekap-filter-kelas').value;
-            cetakTabelHTML("REKAPITULASI PRESENSI GERBANG QR", `Periode: ${blnText} | Kelas: ${kls || 'Semua Kelas'}`, STATE.rekapData);
+            const labelPeriode = tgl ? `Tanggal: ${formatTanggalIndo(tgl)}` : `Periode: ${blnText}`;
+            cetakTabelHTML("REKAPITULASI PRESENSI GERBANG QR", `${labelPeriode} | Kelas: ${kls || 'Semua Kelas'}`, STATE.rekapData);
         }
 
         function cetakTabelHTML(judul, subjudul, dataList) {
