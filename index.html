@@ -1105,50 +1105,117 @@
         </div>
     </div>
 
-    <!-- Modal Konfirmasi Ijin Pulang Awal -->
+    <!-- Modal Konfirmasi Izin Keluar (Keluar Sementara / Pulang Awal) -->
     <div class="modal fade" id="modalAlasanIjin" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-door-open me-2"></i> Konfirmasi Ijin Pulang Awal</h5>
+                    <h5 class="modal-title fw-bold"><i class="fas fa-door-open me-2"></i> Konfirmasi Izin Keluar Gerbang</h5>
                 </div>
                 <div class="modal-body">
-                    <div class="alert alert-warning py-2 small mb-3">
-                        <i class="fas fa-info-circle me-1"></i> Siswa memindai keluar <strong>sebelum jam pulang (<span id="ijin-jam-pulang-ref">14:05</span>)</strong>. Status presensi otomatis diubah menjadi <strong>IJIN (I)</strong>.
-                    </div>
-                    <div class="bg-light border rounded p-3 mb-3">
+                    <div class="bg-light border rounded p-2 px-3 mb-3">
                         <div class="row g-1 small">
-                            <div class="col-4 text-muted fw-semibold">NIS</div>
-                            <div class="col-8 fw-bold" id="ijin-nis">-</div>
+                            <div class="col-4 text-muted fw-semibold">NIS / Kelas</div>
+                            <div class="col-8 fw-bold"><span id="ijin-nis">-</span> &bull; <span id="ijin-kelas">-</span></div>
                             <div class="col-4 text-muted fw-semibold">Nama Siswa</div>
                             <div class="col-8 fw-bold text-primary" id="ijin-nama">-</div>
                             <div class="col-4 text-muted fw-semibold">Jenis Kelamin</div>
                             <div class="col-8 fw-bold" id="ijin-jk">-</div>
-                            <div class="col-4 text-muted fw-semibold">Kelas</div>
-                            <div class="col-8 fw-bold" id="ijin-kelas">-</div>
                         </div>
                     </div>
 
                     <input type="hidden" id="ijin-id-absen">
-                    <label class="form-label fw-bold small">Pilihan Cepat Alasan Izin:</label>
-                    <div class="d-flex flex-wrap gap-2 mb-3">
-                        <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" onclick="pilihAlasanCepat('Sakit di UKS')">Sakit di UKS</button>
-                        <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" onclick="pilihAlasanCepat('Urusan Keluarga')">Urusan Keluarga</button>
-                        <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" onclick="pilihAlasanCepat('Dispensasi / Lomba')">Dispensasi / Lomba</button>
-                        <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" onclick="pilihAlasanCepat('Keperluan Medis / Dokter')">Keperluan Medis</button>
+                    <input type="hidden" id="ijin-id-siswa">
+
+                    <label class="form-label fw-bold small mb-2">Pilih Jenis Izin Keluar:</label>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <input type="radio" class="btn-check" name="jenisIjinKeluar" id="jenis-ijin-sementara" value="sementara" checked onchange="onChangeJenisIjinModal()">
+                            <label class="btn btn-outline-warning text-dark w-100 h-100 text-start p-2 fw-bold" for="jenis-ijin-sementara">
+                                <i class="fas fa-walking me-1"></i> Keluar Sementara
+                                <div class="fw-normal small mt-1" style="font-size:0.72rem;">Akan kembali lagi (Status Hadir tetap).</div>
+                            </label>
+                        </div>
+                        <div class="col-6">
+                            <input type="radio" class="btn-check" name="jenisIjinKeluar" id="jenis-ijin-pulang" value="pulang_awal" onchange="onChangeJenisIjinModal()">
+                            <label class="btn btn-outline-primary w-100 h-100 text-start p-2 fw-bold" for="jenis-ijin-pulang">
+                                <i class="fas fa-home me-1"></i> Pulang Awal
+                                <div class="fw-normal small mt-1" style="font-size:0.72rem;">Tidak kembali (Status jadi IJIN).</div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="ijin-info-banner" class="alert alert-warning py-2 small mb-3">
+                        <i class="fas fa-info-circle me-1"></i> Siswa dicatat <strong>Keluar Sementara</strong>. Scan ulang QR saat kembali atau klik <strong>Kembali</strong> di Dashboard.
+                    </div>
+
+                    <label class="form-label fw-bold small">Pilihan Cepat Keperluan / Alasan:</label>
+                    <div class="d-flex flex-wrap gap-1 mb-3">
+                        <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold" onclick="pilihAlasanCepat('Ambil Barang / Tugas')">Ambil Barang</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold" onclick="pilihAlasanCepat('Keperluan Sekolah / Fotokopi')">Keperluan Sekolah</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold" onclick="pilihAlasanCepat('Urusan Keluarga')">Urusan Keluarga</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold" onclick="pilihAlasanCepat('Keperluan Medis / Dokter')">Medis / Dokter</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold" onclick="pilihAlasanCepat('Sakit di UKS')">Sakit di UKS</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold" onclick="pilihAlasanCepat('Dispensasi / Lomba')">Dispensasi</button>
                     </div>
 
                     <div class="mb-2">
-                        <label for="ijin-alasan-input" class="form-label fw-bold small">Keterangan / Alasan Tambahan <span class="text-danger">*</span></label>
-                        <textarea id="ijin-alasan-input" class="form-control border-primary" rows="2" placeholder="Ketik alasan izin siswa..." required></textarea>
+                        <label for="ijin-alasan-input" class="form-label fw-bold small">Keterangan / Keperluan <span class="text-danger">*</span></label>
+                        <textarea id="ijin-alasan-input" class="form-control border-primary" rows="2" placeholder="Ketik keperluan izin siswa..." required></textarea>
                     </div>
+                    <span class="d-none" id="ijin-jam-pulang-ref">14:05</span>
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary fw-bold" onclick="batalIjinPulang()">Batal</button>
-                    <button type="button" class="btn btn-primary fw-bold" onclick="konfirmasiSimpanIjinPulang()">
-                        <i class="fas fa-check-circle me-1"></i> Simpan Status IJIN
+                    <button type="button" class="btn btn-warning text-dark fw-bold" id="btn-konfirmasi-ijin" onclick="konfirmasiSimpanIjinPulang()">
+                        <i class="fas fa-check-circle me-1"></i> Simpan Keluar Sementara
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Catat Izin Keluar Sementara (Manual dari Dashboard) -->
+    <div class="modal fade" id="modalIzinKeluarManual" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-walking me-2"></i> Catat Izin Keluar Sementara</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <form id="form-izin-keluar-manual" onsubmit="event.preventDefault(); simpanIzinKeluarManual();">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="ik-kelas" class="form-label small fw-bold">Pilih Kelas</label>
+                            <select id="ik-kelas" class="form-select border-primary fw-semibold" onchange="filterSiswaIzinKeluar()" required>
+                                <option value="">-- Pilih Kelas --</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="ik-siswa" class="form-label small fw-bold">Pilih Siswa</label>
+                            <select id="ik-siswa" class="form-select border-primary" disabled required>
+                                <option value="">-- Pilih Kelas Terlebih Dahulu --</option>
+                            </select>
+                        </div>
+                        <label class="form-label small fw-bold">Pilihan Cepat Keperluan:</label>
+                        <div class="d-flex flex-wrap gap-1 mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('ik-keperluan').value='Ambil Barang / Tugas'">Ambil Barang</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('ik-keperluan').value='Keperluan Sekolah / Fotokopi'">Fotokopi / Tugas</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('ik-keperluan').value='Urusan Keluarga Penting'">Urusan Keluarga</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('ik-keperluan').value='Keperluan Medis / Apotek'">Medis / Apotek</button>
+                        </div>
+                        <div class="mb-2">
+                            <label for="ik-keperluan" class="form-label small fw-bold">Keperluan <span class="text-danger">*</span></label>
+                            <textarea id="ik-keperluan" class="form-control border-primary" rows="2" placeholder="Contoh: Mengambil obat / berkas di rumah..." required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-warning text-dark fw-bold">
+                            <i class="fas fa-save me-1"></i> Catat Keluar Sekarang
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -1545,6 +1612,7 @@
             user: null,
             siswa: [],
             absensiHariIni: [],
+            izinKeluarHariIni: [],
             rekapData: [],
             pengaturan: { nama_sekolah: "SMA Negeri 8 Depok", jam_masuk: "07:15", jam_pulang: "14:05", cooldown_menit: 5 },
             users: [],
@@ -2056,6 +2124,7 @@
             callBackend('getInitialData_server', [tgl], (res) => {
                 STATE.siswa = res.siswa || [];
                 STATE.absensiHariIni = res.absensi || [];
+                STATE.izinKeluarHariIni = res.izinKeluar || [];
                 STATE.pengaturan = res.pengaturan || STATE.pengaturan;
                 populateAllClassDropdowns();
                 renderDashboardUI();
@@ -2156,6 +2225,7 @@
             }
 
             renderBelumAbsenTable();
+            renderIzinKeluarDashboard();
         }
 
         /**
@@ -2838,6 +2908,22 @@
                 return;
             }
 
+            if (res.statusCode === 'RETURN_FROM_TEMP_LEAVE') {
+                playBeep('success');
+                renderDisplayPanel({
+                    stateClass: 'state-hadir',
+                    badgeClass: 'bg-success',
+                    badgeText: 'KEMBALI KE SEKOLAH',
+                    bannerClass: 'alert-success',
+                    message: res.message,
+                    jamScan: res.jamScan,
+                    siswa: res.siswa,
+                    record: res.record
+                });
+                refreshRecentScanSilent();
+                return;
+            }
+
             if (res.statusCode === 'NEED_IJIN_REASON') {
                 playBeep('warning');
                 renderDisplayPanel({
@@ -2853,11 +2939,14 @@
 
                 document.getElementById('ijin-jam-pulang-ref').innerText = STATE.pengaturan.jam_pulang || "14:05";
                 document.getElementById('ijin-id-absen').value = res.record.id_absen;
+                document.getElementById('ijin-id-siswa').value = res.siswa.id_siswa;
                 document.getElementById('ijin-nis').innerText = res.siswa.nis;
                 document.getElementById('ijin-nama').innerText = res.siswa.nama;
                 document.getElementById('ijin-jk').innerText = res.siswa.jenis_kelamin === 'L' ? 'Laki-laki (L)' : 'Perempuan (P)';
                 document.getElementById('ijin-kelas').innerText = res.siswa.kelas;
                 document.getElementById('ijin-alasan-input').value = '';
+                document.getElementById('jenis-ijin-sementara').checked = true;
+                onChangeJenisIjinModal();
 
                 STATE.isProcessingScan = true;
                 const modal = new bootstrap.Modal(document.getElementById('modalAlasanIjin'));
@@ -2880,14 +2969,63 @@
             if (usbInput) usbInput.focus();
         }
 
-        function konfirmasiSimpanIjinPulang() {
-            const idAbsen = document.getElementById('ijin-id-absen').value;
-            const alasan = document.getElementById('ijin-alasan-input').value.trim();
-            if (!alasan) return customAlert("Silakan pilih atau ketik alasan izin pulang terlebih dahulu!");
+        function onChangeJenisIjinModal() {
+            const isSementara = document.getElementById('jenis-ijin-sementara').checked;
+            const banner = document.getElementById('ijin-info-banner');
+            const btn = document.getElementById('btn-konfirmasi-ijin');
+            const jamPulang = STATE.pengaturan.jam_pulang || '14:05';
 
+            if (isSementara) {
+                banner.className = 'alert alert-warning py-2 small mb-3';
+                banner.innerHTML = '<i class="fas fa-info-circle me-1"></i> Siswa dicatat <strong>Keluar Sementara</strong>. Status kehadiran harian tetap terjaga. Scan ulang QR saat siswa kembali.';
+                btn.className = 'btn btn-warning text-dark fw-bold';
+                btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Simpan Keluar Sementara';
+            } else {
+                banner.className = 'alert alert-primary py-2 small mb-3';
+                banner.innerHTML = `<i class="fas fa-info-circle me-1"></i> Siswa pulang sebelum <strong>${escapeHTML(jamPulang)}</strong> dan tidak kembali. Status presensi otomatis diubah menjadi <strong>IJIN (I)</strong>.`;
+                btn.className = 'btn btn-primary fw-bold';
+                btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Simpan Status IJIN';
+            }
+        }
+
+        function konfirmasiSimpanIjinPulang() {
+            const alasan = document.getElementById('ijin-alasan-input').value.trim();
+            if (!alasan) return customAlert("Silakan pilih atau ketik keperluan/alasan izin terlebih dahulu!");
+
+            const isSementara = document.getElementById('jenis-ijin-sementara').checked;
+
+            if (isSementara) {
+                const idSiswa = document.getElementById('ijin-id-siswa').value;
+                callBackend('simpanIzinKeluarSementara_server', [idSiswa, alasan], (res) => {
+                    const inst = bootstrap.Modal.getInstance(document.getElementById('modalAlasanIjin'));
+                    if (inst) inst.hide();
+                    STATE.isProcessingScan = false;
+
+                    if (res && res.success) {
+                        playBeep('warning');
+                        renderDisplayPanel({
+                            stateClass: 'state-warning',
+                            badgeClass: 'bg-warning text-dark',
+                            badgeText: 'IZIN KELUAR SEMENTARA',
+                            bannerClass: 'alert-warning',
+                            message: `Keluar sementara dicatat (${alasan}). Scan ulang QR saat siswa kembali ke sekolah.`,
+                            jamScan: res.jamScan || getCurrentTimeStr(),
+                            siswa: res.siswa,
+                            record: res.record
+                        });
+                        refreshRecentScanSilent();
+                    } else {
+                        customAlert(res && res.message ? res.message : "Gagal mencatat izin keluar sementara.");
+                    }
+                    const usbInput = document.getElementById('input-usb-qr');
+                    if (usbInput) usbInput.focus();
+                }, "Mencatat Izin Keluar...");
+                return;
+            }
+
+            const idAbsen = document.getElementById('ijin-id-absen').value;
             callBackend('simpanIjinPulang_server', [idAbsen, alasan], (res) => {
-                const modalEl = document.getElementById('modalAlasanIjin');
-                const inst = bootstrap.Modal.getInstance(modalEl);
+                const inst = bootstrap.Modal.getInstance(document.getElementById('modalAlasanIjin'));
                 if (inst) inst.hide();
                 STATE.isProcessingScan = false;
 
@@ -2910,6 +3048,132 @@
                 const usbInput = document.getElementById('input-usb-qr');
                 if (usbInput) usbInput.focus();
             }, "Menyimpan Status Ijin...");
+        }
+
+        function hitungDurasiIzinText(jamKeluar, jamKembali) {
+            if (!jamKeluar || !jamKembali) return '';
+            const selisih = Math.max(0, timeToMinutes(jamKembali) - timeToMinutes(jamKeluar));
+            if (selisih < 60) return `${selisih} mnt`;
+            return `${Math.floor(selisih / 60)}j ${selisih % 60}m`;
+        }
+
+        function renderIzinKeluarDashboard() {
+            const tb = document.getElementById('tbody-dash-izin-keluar');
+            const badge = document.getElementById('badge-sedang-diluar');
+            if (!tb || !badge) return;
+
+            const filterKls = document.getElementById('dash-filter-kelas').value;
+            const list = (STATE.izinKeluarHariIni || [])
+                .filter(x => !filterKls || x.kelas === filterKls)
+                .slice()
+                .sort((a, b) => {
+                    if (a.status_izin === 'Sedang di Luar' && b.status_izin !== 'Sedang di Luar') return -1;
+                    if (a.status_izin !== 'Sedang di Luar' && b.status_izin === 'Sedang di Luar') return 1;
+                    return String(b.jam_keluar || '').localeCompare(String(a.jam_keluar || ''));
+                });
+
+            const aktifCount = list.filter(x => x.status_izin === 'Sedang di Luar').length;
+            if (aktifCount > 0) {
+                badge.className = 'badge bg-danger';
+                badge.innerText = `${aktifCount} Sedang di Luar`;
+            } else {
+                badge.className = 'badge bg-success';
+                badge.innerText = list.length > 0 ? `Semua Kembali (${list.length})` : '0 Sedang di Luar';
+            }
+
+            if (list.length === 0) {
+                tb.innerHTML = '<tr><td colspan="9" class="text-muted py-2 small">Tidak ada siswa yang izin keluar sementara pada tanggal ini.</td></tr>';
+                return;
+            }
+
+            tb.innerHTML = list.map((r, idx) => {
+                const isOut = r.status_izin === 'Sedang di Luar';
+                const durasi = hitungDurasiIzinText(r.jam_keluar, r.jam_kembali);
+                const safeIdArg = JSON.stringify(String(r.id_izin || '')).replace(/"/g, '&quot;');
+                return `
+                    <tr class="${isOut ? 'table-warning' : ''}">
+                        <td>${idx + 1}</td>
+                        <td><span class="badge bg-secondary">${escapeHTML(r.nis)}</span></td>
+                        <td class="text-start fw-bold">${escapeHTML(r.nama)}</td>
+                        <td><span class="badge bg-dark">${escapeHTML(r.kelas)}</span></td>
+                        <td class="fw-bold text-danger">${escapeHTML(r.jam_keluar || '-')}</td>
+                        <td class="fw-bold text-success">${escapeHTML(r.jam_kembali || '-')}</td>
+                        <td class="text-start small">${escapeHTML(r.keperluan || '-')}</td>
+                        <td>
+                            ${isOut
+                                ? '<span class="badge bg-danger">Sedang di Luar</span>'
+                                : `<span class="badge bg-success">Kembali (${escapeHTML(durasi)})</span>`}
+                        </td>
+                        <td>
+                            ${isOut
+                                ? `<button type="button" class="btn btn-sm btn-success fw-bold text-nowrap" onclick="tandaiSudahKembali(${safeIdArg})"><i class="fas fa-check me-1"></i> Kembali</button>`
+                                : '<span class="text-muted small"><i class="fas fa-check-double text-success"></i> Selesai</span>'}
+                        </td>
+                    </tr>`;
+            }).join('');
+        }
+
+        function openModalIzinKeluarManual() {
+            const kelasList = [...new Set(STATE.siswa.map(s => String(s.kelas || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+            const selKls = document.getElementById('ik-kelas');
+            selKls.innerHTML = '<option value="">-- Pilih Kelas --</option>' +
+                kelasList.map(k => `<option value="${escapeHTML(k)}">${escapeHTML(k)}</option>`).join('');
+
+            const dashKls = document.getElementById('dash-filter-kelas').value;
+            if (dashKls && kelasList.includes(dashKls)) selKls.value = dashKls;
+
+            filterSiswaIzinKeluar();
+            document.getElementById('ik-keperluan').value = '';
+            new bootstrap.Modal(document.getElementById('modalIzinKeluarManual')).show();
+        }
+
+        function filterSiswaIzinKeluar() {
+            const kls = document.getElementById('ik-kelas').value;
+            const selSiswa = document.getElementById('ik-siswa');
+            if (!kls) {
+                selSiswa.disabled = true;
+                selSiswa.innerHTML = '<option value="">-- Pilih Kelas Terlebih Dahulu --</option>';
+                return;
+            }
+            const list = STATE.siswa
+                .filter(s => String(s.kelas || '').trim() === kls)
+                .sort((a, b) => String(a.nama || '').localeCompare(String(b.nama || '')));
+            selSiswa.disabled = false;
+            selSiswa.innerHTML = `<option value="">-- Pilih Siswa (${list.length} siswa) --</option>` +
+                list.map(s => `<option value="${escapeHTML(s.id_siswa)}">${escapeHTML(s.nama)} (${escapeHTML(s.nis)})</option>`).join('');
+        }
+
+        function simpanIzinKeluarManual() {
+            const idSiswa = document.getElementById('ik-siswa').value;
+            const keperluan = document.getElementById('ik-keperluan').value.trim();
+            if (!idSiswa) return customAlert("Pilih kelas dan siswa terlebih dahulu.");
+            if (!keperluan) return customAlert("Isi keperluan izin keluar terlebih dahulu.");
+
+            callBackend('simpanIzinKeluarSementara_server', [idSiswa, keperluan], (res) => {
+                if (res && res.success) {
+                    const inst = bootstrap.Modal.getInstance(document.getElementById('modalIzinKeluarManual'));
+                    if (inst) inst.hide();
+                    loadDashboardData();
+                    customAlert(res.message);
+                } else {
+                    customAlert(res && res.message ? res.message : "Gagal mencatat izin keluar.");
+                }
+            }, "Mencatat Izin Keluar...");
+        }
+
+        function tandaiSudahKembali(idIzin) {
+            const rec = (STATE.izinKeluarHariIni || []).find(x => x.id_izin === idIzin);
+            const namaSiswa = rec ? rec.nama : 'siswa ini';
+            customConfirm(`Tandai "${namaSiswa}" sudah kembali ke sekolah sekarang?`, () => {
+                callBackend('tandaiKembaliIzinKeluar_server', [idIzin], (res) => {
+                    if (res && res.success) {
+                        loadDashboardData();
+                        customAlert(res.message);
+                    } else {
+                        customAlert(res && res.message ? res.message : "Gagal memperbarui status kembali.");
+                    }
+                }, "Memperbarui Status...");
+            });
         }
 
         function renderDisplayPanel({ stateClass, badgeClass, badgeText, bannerClass, message, jamScan, siswa, record }) {
