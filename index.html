@@ -401,6 +401,9 @@
             <div class="nav-item" id="nav-rekap" onclick="navigate('rekap')">
                 <i class="fas fa-table"></i> <span>Rekap</span>
             </div>
+			<div class="nav-item" id="nav-rapor" onclick="navigate('rapor')">
+                <i class="fas fa-graduation-cap"></i> <span>Rapor</span>
+            </div>
             <div class="nav-item admin-only" id="nav-pengaturan" onclick="navigate('pengaturan')">
                 <i class="fas fa-sliders-h"></i> <span>Pengaturan</span>
             </div>
@@ -948,7 +951,184 @@
                     </div>
                 </div>
             </div>
+            
+			<!-- ================================================================= -->
+            <!-- 4B. VIEW RAPOR ABSENSI INDIVIDU                                   -->
+            <!-- ================================================================= -->
+            <div id="view-rapor" class="hidden">
+                <h5 class="fw-bold text-primary mb-3">
+                    <i class="fas fa-graduation-cap me-2"></i> Rapor Absensi Individu
+                </h5>
 
+                <!-- Panel Filter Rapor -->
+                <div class="card-custom border border-primary mb-3">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-6 col-md-2">
+                            <label for="rapor-filter-kelas" class="form-label small fw-bold mb-1">Kelas</label>
+                            <select id="rapor-filter-kelas" class="form-select form-select-sm border-primary fw-semibold" onchange="filterSiswaRapor()">
+                                <option value="">-- Pilih Kelas --</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <label for="rapor-filter-siswa" class="form-label small fw-bold mb-1">Nama Siswa</label>
+                            <select id="rapor-filter-siswa" class="form-select form-select-sm border-primary fw-semibold" disabled>
+                                <option value="">-- Pilih Kelas Dulu --</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <label for="rapor-filter-periode" class="form-label small fw-bold mb-1">Periode</label>
+                            <select id="rapor-filter-periode" class="form-select form-select-sm border-primary fw-semibold">
+                                <option value="Semester 1">Semester 1</option>
+                                <option value="Semester 2">Semester 2</option>
+                                <option value="1 Tahun Penuh">1 Tahun Penuh</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <label for="rapor-filter-tanggal" class="form-label small fw-bold mb-1">Cari Tgl (Opsional)</label>
+                            <input type="date" id="rapor-filter-tanggal" class="form-control form-control-sm border-primary">
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <button type="button" class="btn btn-sm btn-primary w-100 fw-bold py-1" onclick="loadRaporSiswa()">
+                                <i class="fas fa-search me-1"></i> Tampil
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tombol Cetak PDF Rapor -->
+                <div class="d-flex justify-content-end mb-2">
+                    <button type="button" id="btn-cetak-rapor-pdf" class="btn btn-sm btn-danger fw-bold px-3 shadow-sm hidden" onclick="cetakRaporPDF()">
+                        <i class="fas fa-print me-1"></i> Cetak Rapor PDF
+                    </button>
+                </div>
+
+                <!-- Placeholder Sebelum Tampil -->
+                <div id="rapor-empty-state" class="card-custom text-center py-5 text-muted">
+                    <i class="fas fa-file-alt fa-3x opacity-50 mb-2"></i>
+                    <div class="fw-bold">Belum Ada Rapor Ditampilkan</div>
+                    <small>Pilih Kelas, Nama Siswa, dan Periode di atas lalu klik tombol <strong>Tampil</strong>.</small>
+                </div>
+
+                <!-- Kartu Rapor Absensi Siswa -->
+                <div id="rapor-result-card" class="card-custom border border-primary p-4 hidden">
+                    <h4 class="text-center fw-bold text-dark mb-4 pb-2 border-bottom">RAPOR ABSENSI SISWA</h4>
+
+                    <!-- Identitas Siswa -->
+                    <div class="row mb-4">
+                        <div class="col-12 col-md-8">
+                            <table class="table table-borderless table-sm mb-0 align-middle">
+                                <tr>
+                                    <th class="text-dark fw-bold" style="width: 145px;">NIS</th>
+                                    <td style="width: 14px;">:</td>
+                                    <td class="fw-bold" id="rapor-nis">-</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-dark fw-bold">Nama Siswa</th>
+                                    <td>:</td>
+                                    <td class="fw-bold text-primary fs-5 text-uppercase" id="rapor-nama">-</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-dark fw-bold">L/P</th>
+                                    <td>:</td>
+                                    <td class="fw-bold" id="rapor-jk">-</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-dark fw-bold">Kelas</th>
+                                    <td>:</td>
+                                    <td><span class="badge bg-dark px-2 py-1" id="rapor-kelas">-</span></td>
+                                </tr>
+                                <tr>
+                                    <th class="text-dark fw-bold">Semester</th>
+                                    <td>:</td>
+                                    <td class="fw-bold" id="rapor-periode-label">-</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Ringkasan Kehadiran -->
+                    <h6 class="fw-bold text-dark mb-2">
+                        <i class="fas fa-chart-pie text-primary me-2"></i> Ringkasan Kehadiran
+                    </h6>
+                    <div class="row g-2 mb-2">
+                        <div class="col-4 col-md-2">
+                            <div class="stat-card bg-success py-2">
+                                <h4 class="fw-bold m-0" id="rapor-h">0</h4>
+                                <small>Hadir (H)</small>
+                            </div>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <div class="stat-card bg-orange py-2">
+                                <h4 class="fw-bold m-0" id="rapor-t">0</h4>
+                                <small>Terlambat (T)</small>
+                            </div>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <div class="stat-card bg-primary py-2">
+                                <h4 class="fw-bold m-0" id="rapor-i">0</h4>
+                                <small>Ijin (I)</small>
+                            </div>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <div class="stat-card bg-purple py-2">
+                                <h4 class="fw-bold m-0" id="rapor-s">0</h4>
+                                <small>Sakit (S)</small>
+                            </div>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <div class="stat-card bg-danger py-2">
+                                <h4 class="fw-bold m-0" id="rapor-a">0</h4>
+                                <small>Alpa (A)</small>
+                            </div>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <div class="stat-card bg-dark py-2">
+                                <h4 class="fw-bold m-0 text-warning" id="rapor-persen">0%</h4>
+                                <small>Kehadiran</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar Persentase + Info Tambahan Izin -->
+                    <div class="bg-light border rounded p-2 px-3 mb-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between small fw-bold mb-1">
+                                <span>Persentase Kehadiran (H + T dari Total Hari Tercatat)</span>
+                                <span id="rapor-persen-detail">0% (0 / 0 hari)</span>
+                            </div>
+                            <div class="progress" style="height: 10px;">
+                                <div id="rapor-persen-bar" class="progress-bar bg-success" role="progressbar" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap gap-1">
+                            <span class="badge bg-warning text-dark">Izin Sementara: <span id="rapor-cnt-izk">0</span>x</span>
+                            <span class="badge bg-info text-dark">Ijin Pulang Awal: <span id="rapor-cnt-ip">0</span>x</span>
+                        </div>
+                    </div>
+
+                    <!-- Tabel Rincian Ketidakhadiran & Izin -->
+                    <h6 class="fw-bold text-dark mb-2">
+                        <i class="fas fa-clipboard-list text-danger me-2"></i> Rincian Ketidakhadiran, Ijin Pulang &amp; Izin Keluar Sementara
+                    </h6>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped table-sm align-middle text-center mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th width="6%">No</th>
+                                    <th width="16%">Tanggal</th>
+                                    <th width="20%">Kategori / Status</th>
+                                    <th width="24%">Waktu</th>
+                                    <th class="text-start">Keterangan / Keperluan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-rapor-rincian">
+                                <tr><td colspan="5" class="text-muted py-3">Tidak ada catatan ketidakhadiran atau izin pada periode ini.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+			
             <!-- ================================================================= -->
             <!-- 5. VIEW PENGATURAN & AKUN (ADMIN ONLY)                            -->
             <!-- ================================================================= -->
@@ -1614,6 +1794,7 @@
             absensiHariIni: [],
             izinKeluarHariIni: [],
             rekapData: [],
+			raporData: null,
             pengaturan: { nama_sekolah: "SMA Negeri 8 Depok", jam_masuk: "07:15", jam_pulang: "14:05", cooldown_menit: 5 },
             users: [],
             activeQRCodeSiswa: null,
@@ -2086,7 +2267,7 @@
                 document.body.classList.remove('kiosk-mode');
             }
 
-            const pages = ['dashboard', 'scan', 'siswa', 'rekap', 'pengaturan'];
+            const pages = ['dashboard', 'scan', 'siswa', 'rekap', 'rapor', 'pengaturan'];
             pages.forEach(p => {
                 const nav = document.getElementById('nav-' + p);
                 const view = document.getElementById('view-' + p);
@@ -2102,6 +2283,7 @@
                 scan: "Scan QR Gerbang",
                 siswa: "Data Siswa & Kartu QR",
                 rekap: "Rekap Presensi",
+                rapor: "Rapor Individu",
                 pengaturan: "Pengaturan & Akun"
             };
             document.getElementById('app-title').innerText = titles[page] || "Dashboard";
@@ -2110,6 +2292,7 @@
             if (page === 'scan') initScanPage();
             if (page === 'siswa') loadSiswaData();
             if (page === 'rekap') initRekapPage();
+            if (page === 'rapor') initRaporPage();
             if (page === 'pengaturan') loadPengaturanDanUsers();
         }
 
@@ -3861,6 +4044,260 @@
                     </table>
                     <div style="width: 240px; float:right; text-align:center; margin-top: 28px; font-size: 13px;">
                         ${todayIndo}<br>Petugas Piket / Admin<br><br><br><br>
+                        <strong>${escapeHTML(STATE.user ? STATE.user.nama : '__________________')}</strong>
+                    </div>
+                </div>`;
+            setTimeout(() => { window.print(); }, 250);
+        }
+		 
+		// =========================================================================
+        // 4B. RAPOR ABSENSI INDIVIDU PER SISWA
+        // =========================================================================
+        function initRaporPage() {
+            const populate = () => {
+                const kelasList = [...new Set(STATE.siswa.map(s => String(s.kelas || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+                const selKls = document.getElementById('rapor-filter-kelas');
+                const prevKls = selKls.value;
+
+                selKls.innerHTML = '<option value="">-- Pilih Kelas --</option>' +
+                    kelasList.map(k => `<option value="${escapeHTML(k)}">${escapeHTML(k)}</option>`).join('');
+
+                if (prevKls && kelasList.includes(prevKls)) {
+                    selKls.value = prevKls;
+                } else if (kelasList.length > 0) {
+                    selKls.value = kelasList[0];
+                }
+                filterSiswaRapor();
+            };
+
+            if (!STATE.siswa || STATE.siswa.length === 0) {
+                callBackend('getSiswa_server', [], (data) => {
+                    STATE.siswa = data || [];
+                    populateAllClassDropdowns();
+                    populate();
+                }, "Memuat Data Siswa...");
+            } else {
+                populate();
+            }
+        }
+
+        function filterSiswaRapor() {
+            const kls = document.getElementById('rapor-filter-kelas').value;
+            const selSiswa = document.getElementById('rapor-filter-siswa');
+
+            if (!kls) {
+                selSiswa.disabled = true;
+                selSiswa.innerHTML = '<option value="">-- Pilih Kelas Dulu --</option>';
+                return;
+            }
+
+            const prevId = selSiswa.value;
+            const list = STATE.siswa
+                .filter(s => String(s.kelas || '').trim() === kls)
+                .sort((a, b) => String(a.nama || '').localeCompare(String(b.nama || '')));
+
+            selSiswa.disabled = false;
+            if (list.length === 0) {
+                selSiswa.innerHTML = '<option value="">-- Tidak ada siswa --</option>';
+            } else {
+                selSiswa.innerHTML = list
+                    .map(s => `<option value="${escapeHTML(s.id_siswa)}">${escapeHTML(s.nis)} - ${escapeHTML(s.nama.toUpperCase())}</option>`)
+                    .join('');
+                if (prevId && list.some(s => s.id_siswa === prevId)) {
+                    selSiswa.value = prevId;
+                }
+            }
+        }
+
+        function loadRaporSiswa() {
+            const idSiswa = document.getElementById('rapor-filter-siswa').value;
+            const periode = document.getElementById('rapor-filter-periode').value;
+            const tglOpt = document.getElementById('rapor-filter-tanggal').value;
+
+            if (!idSiswa) {
+                return customAlert("Silakan pilih Kelas dan Nama Siswa terlebih dahulu.");
+            }
+
+            callBackend('getRaporSiswa_server', [idSiswa, periode, tglOpt], (res) => {
+                if (!res || !res.success) {
+                    return customAlert(res && res.message ? res.message : "Gagal memuat rapor siswa.");
+                }
+                STATE.raporData = res;
+                renderRaporUI(res);
+            }, "Menyusun Rapor Siswa...");
+        }
+
+        function getRaporKategoriBadge(kode, kategori) {
+            if (kode === 'IP') return `<span class="badge bg-info text-dark">${escapeHTML(kategori)}</span>`;
+            if (kode === 'IZK') return `<span class="badge bg-warning text-dark">${escapeHTML(kategori)}</span>`;
+            if (kode === 'I') return `<span class="badge bg-primary">${escapeHTML(kategori)}</span>`;
+            if (kode === 'S') return `<span class="badge bg-purple text-white">${escapeHTML(kategori)}</span>`;
+            if (kode === 'A') return `<span class="badge bg-danger">${escapeHTML(kategori)}</span>`;
+            return `<span class="badge bg-secondary">${escapeHTML(kategori || '-')}</span>`;
+        }
+
+        function renderRaporUI(res) {
+            const s = res.siswa || {};
+            const rk = res.ringkasan || {};
+            const rincian = res.rincian || [];
+
+            document.getElementById('rapor-empty-state').classList.add('hidden');
+            document.getElementById('rapor-result-card').classList.remove('hidden');
+            document.getElementById('btn-cetak-rapor-pdf').classList.remove('hidden');
+
+            document.getElementById('rapor-nis').innerText = s.nis || '-';
+            document.getElementById('rapor-nama').innerText = s.nama || '-';
+            document.getElementById('rapor-jk').innerText = s.jenis_kelamin === 'L'
+                ? 'Laki-laki (L)'
+                : (s.jenis_kelamin === 'P' ? 'Perempuan (P)' : (s.jenis_kelamin || '-'));
+            document.getElementById('rapor-kelas').innerText = s.kelas || '-';
+
+            const labelPeriode = res.tanggalOpsional
+                ? `${res.periode} (Filter Tgl: ${formatTanggalIndo(res.tanggalOpsional)})`
+                : res.periode;
+            document.getElementById('rapor-periode-label').innerText = labelPeriode;
+
+            document.getElementById('rapor-h').innerText = rk.h || 0;
+            document.getElementById('rapor-t').innerText = rk.t || 0;
+            document.getElementById('rapor-i').innerText = rk.i || 0;
+            document.getElementById('rapor-s').innerText = rk.s || 0;
+            document.getElementById('rapor-a').innerText = rk.a || 0;
+
+            const persen = rk.persentase || 0;
+            const hadirTotal = (rk.h || 0) + (rk.t || 0);
+            const totalHari = rk.totalTercatat || 0;
+
+            document.getElementById('rapor-persen').innerText = `${persen}%`;
+            document.getElementById('rapor-persen-detail').innerText = `${persen}% (${hadirTotal} / ${totalHari} hari tercatat)`;
+
+            const bar = document.getElementById('rapor-persen-bar');
+            bar.style.width = `${Math.min(100, Math.max(0, persen))}%`;
+            bar.className = persen >= 85
+                ? 'progress-bar bg-success'
+                : (persen >= 70 ? 'progress-bar bg-warning' : 'progress-bar bg-danger');
+
+            document.getElementById('rapor-cnt-izk').innerText = rk.ijinSementara || 0;
+            document.getElementById('rapor-cnt-ip').innerText = rk.ijinPulang || 0;
+
+            const tb = document.getElementById('tbody-rapor-rincian');
+            if (rincian.length === 0) {
+                tb.innerHTML = '<tr><td colspan="5" class="text-success fw-semibold py-3"><i class="fas fa-check-circle me-1"></i> Tidak ada catatan ketidakhadiran, ijin pulang, maupun izin keluar sementara pada periode ini.</td></tr>';
+            } else {
+                tb.innerHTML = rincian.map((r, idx) => `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td class="fw-semibold">${escapeHTML(formatTanggalIndo(r.tanggal))}</td>
+                        <td>${getRaporKategoriBadge(r.kode, r.kategori)}</td>
+                        <td class="small fw-semibold">${escapeHTML(r.waktu || '-')}</td>
+                        <td class="text-start small">${escapeHTML(r.keterangan || '-')}</td>
+                    </tr>`).join('');
+            }
+        }
+
+        function cetakRaporPDF() {
+            const res = STATE.raporData;
+            if (!res || !res.siswa) {
+                return customAlert("Tampilkan rapor siswa terlebih dahulu sebelum mencetak PDF.");
+            }
+
+            const s = res.siswa;
+            const rk = res.ringkasan;
+            const rincian = res.rincian || [];
+            const todayIndo = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            const jkText = s.jenis_kelamin === 'L' ? 'Laki-laki (L)' : 'Perempuan (P)';
+            const labelPeriode = res.tanggalOpsional
+                ? `${res.periode} (Khusus Tgl: ${formatTanggalIndo(res.tanggalOpsional)})`
+                : res.periode;
+
+            const rincianHtml = rincian.length === 0
+                ? '<tr><td colspan="5" style="padding:10px;">Tidak ada catatan ketidakhadiran atau izin pada periode ini.</td></tr>'
+                : rincian.map((r, idx) => `
+                    <tr>
+                        <td style="padding:5px;">${idx + 1}</td>
+                        <td style="padding:5px;">${escapeHTML(formatTanggalIndo(r.tanggal))}</td>
+                        <td style="padding:5px;"><strong>${escapeHTML(r.kategori)}</strong></td>
+                        <td style="padding:5px;">${escapeHTML(r.waktu || '-')}</td>
+                        <td style="padding:5px; text-align:left;">${escapeHTML(r.keterangan || '-')}</td>
+                    </tr>`).join('');
+
+            const container = document.getElementById('print-container-global');
+            container.innerHTML = `
+                <div style="font-family: 'Times New Roman', serif; color:#000; padding: 8px;">
+                    <div style="text-align:center; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 16px;">
+                        <h3 style="margin:0; font-weight:bold;">${escapeHTML((STATE.pengaturan.nama_sekolah || 'SEKOLAH').toUpperCase())}</h3>
+                        <h4 style="margin:4px 0 0 0; letter-spacing:1px;">RAPOR ABSENSI SISWA</h4>
+                    </div>
+
+                    <table style="width:100%; font-size:13px; margin-bottom:16px; border-collapse:collapse;">
+                        <tr>
+                            <td style="width:130px; padding:3px 0;"><strong>NIS</strong></td>
+                            <td style="width:15px;">:</td>
+                            <td>${escapeHTML(s.nis)}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:3px 0;"><strong>Nama Siswa</strong></td>
+                            <td>:</td>
+                            <td><strong>${escapeHTML(String(s.nama || '').toUpperCase())}</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:3px 0;"><strong>Jenis Kelamin</strong></td>
+                            <td>:</td>
+                            <td>${escapeHTML(jkText)}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:3px 0;"><strong>Kelas</strong></td>
+                            <td>:</td>
+                            <td>${escapeHTML(s.kelas)}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:3px 0;"><strong>Periode / Semester</strong></td>
+                            <td>:</td>
+                            <td>${escapeHTML(labelPeriode)}</td>
+                        </tr>
+                    </table>
+
+                    <div style="font-weight:bold; font-size:13px; margin-bottom:6px;">A. Ringkasan Kehadiran</div>
+                    <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:center; margin-bottom:16px;" border="1">
+                        <thead>
+                            <tr style="background:#eee;">
+                                <th style="padding:6px;">Hadir (H)</th>
+                                <th style="padding:6px;">Terlambat (T)</th>
+                                <th style="padding:6px;">Ijin (I)</th>
+                                <th style="padding:6px;">Sakit (S)</th>
+                                <th style="padding:6px;">Alpa (A)</th>
+                                <th style="padding:6px;">Izin Sementara</th>
+                                <th style="padding:6px;">Persentase Kehadiran</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="padding:6px; font-weight:bold;">${rk.h || 0}</td>
+                                <td style="padding:6px; font-weight:bold;">${rk.t || 0}</td>
+                                <td style="padding:6px; font-weight:bold;">${rk.i || 0}</td>
+                                <td style="padding:6px; font-weight:bold;">${rk.s || 0}</td>
+                                <td style="padding:6px; font-weight:bold;">${rk.a || 0}</td>
+                                <td style="padding:6px; font-weight:bold;">${rk.ijinSementara || 0}x</td>
+                                <td style="padding:6px; font-weight:bold;">${rk.persentase || 0}%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div style="font-weight:bold; font-size:13px; margin-bottom:6px;">B. Rincian Ketidakhadiran, Ijin Pulang &amp; Izin Keluar Sementara</div>
+                    <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;" border="1">
+                        <thead>
+                            <tr style="background:#eee;">
+                                <th style="padding:5px; width:6%;">No</th>
+                                <th style="padding:5px; width:18%;">Tanggal</th>
+                                <th style="padding:5px; width:22%;">Kategori</th>
+                                <th style="padding:5px; width:24%;">Waktu</th>
+                                <th style="padding:5px; text-align:left;">Keterangan / Keperluan</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rincianHtml}</tbody>
+                    </table>
+
+                    <div style="width: 240px; float:right; text-align:center; margin-top: 32px; font-size: 13px;">
+                        ${todayIndo}<br>Wali Kelas / Petugas Piket<br><br><br><br>
                         <strong>${escapeHTML(STATE.user ? STATE.user.nama : '__________________')}</strong>
                     </div>
                 </div>`;
