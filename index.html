@@ -469,7 +469,45 @@
                         </div>
                     </div>
                 </div>
+                
+<!-- PANEL PANTAUAN IZIN KELUAR SEMENTARA (OPSI 1) -->
+                <div class="card-custom border-top border-warning border-3" id="card-izin-keluar-dashboard">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <h6 class="m-0 fw-bold text-dark">
+                                <i class="fas fa-walking text-warning me-2"></i>
+                                Pantauan Izin Keluar Sementara
+                            </h6>
+                            <span id="badge-sedang-diluar" class="badge bg-success">0 Sedang di Luar</span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button class="btn btn-sm btn-warning text-dark fw-bold" onclick="openModalIzinKeluarManual()">
+                                <i class="fas fa-plus-circle me-1"></i> Catat Izin Keluar
+                            </button>
+                        </div>
+                    </div>
 
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover table-sm align-middle text-center mb-0">
+                            <thead class="table-warning">
+                                <tr>
+                                    <th width="5%">No</th>
+                                    <th>NIS</th>
+                                    <th class="text-start">Nama Siswa</th>
+                                    <th>Kelas</th>
+                                    <th>Jam Keluar</th>
+                                    <th>Jam Kembali</th>
+                                    <th class="text-start">Keperluan</th>
+                                    <th>Status</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-dash-izin-keluar">
+                                <tr><td colspan="9" class="text-muted py-2 small">Tidak ada siswa yang izin keluar sementara pada tanggal ini.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>				
                 <!-- Tabel Siswa Tidak Hadir / Ijin -->
                 <div class="card-custom">
                     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
