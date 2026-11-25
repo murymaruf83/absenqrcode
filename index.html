@@ -3318,12 +3318,62 @@
                 selSiswa.innerHTML = '<option value="">-- Pilih Kelas Terlebih Dahulu --</option>';
                 return;
             }
+
+            const tglDash = document.getElementById('dash-filter-tanggal').value;
+            const isViewingToday = (tglDash === getTodayStr());
+
             const list = STATE.siswa
                 .filter(s => String(s.kelas || '').trim() === kls)
                 .sort((a, b) => String(a.nama || '').localeCompare(String(b.nama || '')));
+
+            const tersedia = [];
+            const terkunci = [];
+
+            list.forEach(s => {
+                if (!isViewingToday) {
+                    tersedia.push(s);
+                    return;
+                }
+
+                const nisUpper = String(s.nis || '').trim().toUpperCase();
+                const abs = (STATE.absensiHariIni || []).find(
+                    a => a.id_siswa === s.id_siswa || String(a.nis || '').trim().toUpperCase() === nisUpper
+                );
+                const sedangKeluar = (STATE.izinKeluarHariIni || []).find(
+                    x => (x.id_siswa === s.id_siswa || String(x.nis || '').trim().toUpperCase() === nisUpper) &&
+                         x.status_izin === 'Sedang di Luar'
+                );
+
+                if (!abs || !abs.jam_masuk) {
+                    const labelSt = abs ? `Status ${abs.status}` : 'Belum Absen Masuk';
+                    terkunci.push({ siswa: s, alasan: labelSt });
+                } else if (abs.jam_pulang) {
+                    terkunci.push({ siswa: s, alasan: `Sudah Pulang ${abs.jam_pulang}` });
+                } else if (['I', 'S', 'A'].includes(String(abs.status || '').trim().toUpperCase())) {
+                    terkunci.push({ siswa: s, alasan: `Status ${abs.status}` });
+                } else if (sedangKeluar) {
+                    terkunci.push({ siswa: s, alasan: `Sedang di Luar (${sedangKeluar.jam_keluar})` });
+                } else {
+                    tersedia.push(s);
+                }
+            });
+
             selSiswa.disabled = false;
-            selSiswa.innerHTML = `<option value="">-- Pilih Siswa (${list.length} siswa) --</option>` +
-                list.map(s => `<option value="${escapeHTML(s.id_siswa)}">${escapeHTML(s.nama)} (${escapeHTML(s.nis)})</option>`).join('');
+            let html = `<option value="">-- Pilih Siswa Aktif di Sekolah (${tersedia.length} siswa) --</option>`;
+
+            if (tersedia.length > 0) {
+                html += `<optgroup label="Aktif di Sekolah (Bisa Izin Keluar)">` +
+                    tersedia.map(s => `<option value="${escapeHTML(s.id_siswa)}">${escapeHTML(s.nama)} (${escapeHTML(s.nis)})</option>`).join('') +
+                    `</optgroup>`;
+            }
+
+            if (terkunci.length > 0) {
+                html += `<optgroup label="Tidak Tersedia (Sudah Pulang / Belum Hadir / Di Luar)">` +
+                    terkunci.map(item => `<option value="" disabled>${escapeHTML(item.siswa.nama)} (${escapeHTML(item.siswa.nis)}) — [${escapeHTML(item.alasan)}]</option>`).join('') +
+                    `</optgroup>`;
+            }
+
+            selSiswa.innerHTML = html;
         }
 
         function simpanIzinKeluarManual() {
