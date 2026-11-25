@@ -478,8 +478,8 @@
                             Daftar Siswa Ijin / Sakit / Alpa <span class="text-primary" id="dash-label-tanggal"></span>
                         </h6>
                         <div class="d-flex flex-wrap gap-2">
-                            <input type="date" id="dash-filter-tanggal" class="form-control form-control-sm border-primary" style="width: auto;" onchange="loadDashboardData()">
-                            <select id="dash-filter-kelas" class="form-select form-select-sm border-primary" style="width: auto;" onchange="renderDashboardUI()">
+                            <input type="date" id="dash-filter-tanggal" class="form-control form-control-sm border-primary" style="width: auto;" onchange="STATE.belumAbsenPage = 1; loadDashboardData();">
+                            <select id="dash-filter-kelas" class="form-select form-select-sm border-primary" style="width: auto;" onchange="STATE.belumAbsenPage = 1; renderDashboardUI();">
                                 <option value="">Semua Kelas</option>
                             </select>
                             <button class="btn btn-sm btn-outline-primary fw-bold" onclick="openModalAbsenManual()">
@@ -510,6 +510,53 @@
                                 <tr><td colspan="9" class="text-muted py-3">Memuat data...</td></tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- Tabel Daftar Siswa Belum Absen (Paginasi 10 Baris / Halaman) -->
+                <div class="card-custom border-top border-danger border-3">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <h6 class="m-0 fw-bold text-danger">
+                                <i class="fas fa-user-times me-2"></i> Daftar Siswa Belum Absen
+                            </h6>
+                            <span id="badge-total-belum-absen" class="badge bg-danger rounded-pill px-2 py-1">0 Siswa</span>
+                            <span class="small text-muted fw-semibold" id="dash-label-tanggal-belum"></span>
+                        </div>
+                        <div class="input-group input-group-sm" style="max-width: 280px;">
+                            <span class="input-group-text bg-white border-danger text-danger">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" id="dash-search-belum-absen" class="form-control border-danger" placeholder="Cari NIS atau Nama siswa..." oninput="STATE.belumAbsenPage = 1; renderBelumAbsenTable();">
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover table-sm align-middle text-center mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th width="6%">No</th>
+                                    <th>NIS</th>
+                                    <th class="text-start">Nama Siswa</th>
+                                    <th>L/P</th>
+                                    <th>Kelas</th>
+                                    <th>Status</th>
+                                    <th width="16%">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-dash-belum-absen">
+                                <tr><td colspan="7" class="text-muted py-3">Memuat data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="dash-belum-absen-footer" class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 mt-3 pt-2 border-top">
+                        <div id="dash-belum-absen-info" class="small text-muted fw-semibold">
+                            Menampilkan 0 siswa
+                        </div>
+                        <nav aria-label="Navigasi Halaman Belum Absen">
+                            <ul id="dash-belum-absen-pagination" class="pagination pagination-sm mb-0 flex-wrap justify-content-center"></ul>
+                        </nav>
                     </div>
                 </div>
 
@@ -587,8 +634,8 @@
                                 <option value="10:30:00">10:30 (Ijin Pulang Tengah Jalan)</option>
                                 <option value="14:15:00">14:15 (Pulang Normal &gt;= 14:05)</option>
                             </select>
-                            <button class="btn btn-sm btn-primary fw-bold" onclick="triggerDemoScan('2601001')">Test: Ahmad (2601001)</button>
-                            <button class="btn btn-sm btn-success fw-bold" onclick="triggerDemoScan('2601002')">Test: Siti (2601002)</button>
+                            <button class="btn btn-sm btn-primary fw-bold" onclick="triggerDemoScan('82610502')">Test: Aditya (82610502)</button>
+                            <button class="btn btn-sm btn-success fw-bold" onclick="triggerDemoScan('82610514')">Test: Nayla (82610514)</button>
                         </div>
                     </div>
                 </div>
@@ -1395,14 +1442,66 @@
                 cooldown_menit: 5
             },
             siswa: [
-                { id_siswa: "S001", nis: "2601001", nama: "Ahmad Fauzan Pratama", jenis_kelamin: "L", kelas: "X-1" },
-                { id_siswa: "S002", nis: "2601002", nama: "Siti Rahmawati Putri", jenis_kelamin: "P", kelas: "X-1" },
-                { id_siswa: "S003", nis: "2601003", nama: "Dimas Arya Nugroho", jenis_kelamin: "L", kelas: "XI-2" },
-                { id_siswa: "S004", nis: "2601004", nama: "Nadia Kartika Sari", jenis_kelamin: "P", kelas: "XI-2" },
-                { id_siswa: "S005", nis: "2601005", nama: "Rizky Ramadhan", jenis_kelamin: "L", kelas: "XII-1" }
+                // 12 Siswa Kelas X-1
+                { id_siswa: "S001", nis: "82610501", nama: "Aji Santoso", jenis_kelamin: "L", kelas: "X-1" },
+                { id_siswa: "S002", nis: "82610502", nama: "Aditya Pratama", jenis_kelamin: "L", kelas: "X-1" },
+                { id_siswa: "S003", nis: "82610503", nama: "Aulia Rahmawati", jenis_kelamin: "P", kelas: "X-1" },
+                { id_siswa: "S004", nis: "82610504", nama: "Bagas Saputra", jenis_kelamin: "L", kelas: "X-1" },
+                { id_siswa: "S005", nis: "82610505", nama: "Citra Dewi Lestari", jenis_kelamin: "P", kelas: "X-1" },
+                { id_siswa: "S006", nis: "82610506", nama: "Daffa Maulana", jenis_kelamin: "L", kelas: "X-1" },
+                { id_siswa: "S007", nis: "82610507", nama: "Fadhila Nurul Azizah", jenis_kelamin: "P", kelas: "X-1" },
+                { id_siswa: "S008", nis: "82610508", nama: "Gilang Ramadhan", jenis_kelamin: "L", kelas: "X-1" },
+                { id_siswa: "S009", nis: "82610509", nama: "Haris Firmansyah", jenis_kelamin: "L", kelas: "X-1" },
+                { id_siswa: "S010", nis: "82610510", nama: "Intan Permata Sari", jenis_kelamin: "P", kelas: "X-1" },
+                { id_siswa: "S011", nis: "82610511", nama: "Kevin Alfareza", jenis_kelamin: "L", kelas: "X-1" },
+                { id_siswa: "S012", nis: "82610512", nama: "Nadia Putri Kartika", jenis_kelamin: "P", kelas: "X-1" },
+                // 11 Siswa Kelas X-2
+                { id_siswa: "S013", nis: "82610513", nama: "Muhammad Rizky Fauzan", jenis_kelamin: "L", kelas: "X-2" },
+                { id_siswa: "S014", nis: "82610514", nama: "Nayla Khairunnisa", jenis_kelamin: "P", kelas: "X-2" },
+                { id_siswa: "S015", nis: "82610515", nama: "Rafi Akbar Hidayat", jenis_kelamin: "L", kelas: "X-2" },
+                { id_siswa: "S016", nis: "82610516", nama: "Salma Azzahra", jenis_kelamin: "P", kelas: "X-2" },
+                { id_siswa: "S017", nis: "82610517", nama: "Satria Wijaya Kusuma", jenis_kelamin: "L", kelas: "X-2" },
+                { id_siswa: "S018", nis: "82610518", nama: "Siska Wulandari", jenis_kelamin: "P", kelas: "X-2" },
+                { id_siswa: "S019", nis: "82610519", nama: "Syifa Maulida", jenis_kelamin: "P", kelas: "X-2" },
+                { id_siswa: "S020", nis: "82610520", nama: "Tegar Budi Santoso", jenis_kelamin: "L", kelas: "X-2" },
+                { id_siswa: "S021", nis: "82610521", nama: "Tiara Anggraini", jenis_kelamin: "P", kelas: "X-2" },
+                { id_siswa: "S022", nis: "82610522", nama: "Yoga Prasetyo", jenis_kelamin: "L", kelas: "X-2" },
+                { id_siswa: "S023", nis: "82610523", nama: "Zahra Nabila Putri", jenis_kelamin: "P", kelas: "X-2" }
             ],
-            absensi: []
+            // 2 data absensi awal hari ini agar tersisa tepat 21 siswa belum absen (3 halaman: 10, 10, 1)
+            absensi: [
+                {
+                    id_absen: "ABS-INIT-01",
+                    tanggal: getTodayStr(),
+                    id_siswa: "S001",
+                    nis: "82610501",
+                    nama: "Aji Santoso",
+                    jenis_kelamin: "L",
+                    kelas: "X-1",
+                    jam_masuk: "07:08:15",
+                    jam_pulang: "",
+                    status: "H",
+                    status_pulang: "Belum Pulang",
+                    keterangan: "Tepat Waktu"
+                },
+                {
+                    id_absen: "ABS-INIT-02",
+                    tanggal: getTodayStr(),
+                    id_siswa: "S013",
+                    nis: "82610513",
+                    nama: "Muhammad Rizky Fauzan",
+                    jenis_kelamin: "L",
+                    kelas: "X-2",
+                    jam_masuk: "",
+                    jam_pulang: "",
+                    status: "S",
+                    status_pulang: "-",
+                    keterangan: "Konfirmasi Orang Tua"
+                }
+            ]
         };
+
+        const BELUM_ABSEN_PER_PAGE = 10;
 
         let STATE = {
             user: null,
@@ -1419,7 +1518,8 @@
             cameraRunning: false,
             availableCameras: [],
             importRawRows: [],
-            importValidatedRows: []
+            importValidatedRows: [],
+            belumAbsenPage: 1
         };
 
         function showLoader(msg = "Memproses Data...") {
@@ -2016,9 +2116,195 @@
                         <td><span class="badge ${r.status_pulang === 'Pulang Normal' ? 'bg-success' : (r.status_pulang === 'Ijin Pulang Awal' ? 'bg-primary' : 'bg-secondary')}">${escapeHTML(r.status_pulang || '-')}</span></td>
                     </tr>`).join('');
             }
+
+            renderBelumAbsenTable();
         }
 
-        function openModalAbsenManual() {
+        /**
+         * Menyusun dan merender tabel "Daftar Siswa Belum Absen" dengan paginasi ketat
+         * maksimal 10 baris per halaman (BELUM_ABSEN_PER_PAGE).
+         */
+        function renderBelumAbsenTable() {
+            const filterKls = document.getElementById('dash-filter-kelas').value;
+            const tgl = document.getElementById('dash-filter-tanggal').value;
+            const searchEl = document.getElementById('dash-search-belum-absen');
+            const keyword = searchEl ? searchEl.value.trim().toLowerCase() : '';
+
+            const labelTglEl = document.getElementById('dash-label-tanggal-belum');
+            if (labelTglEl) labelTglEl.innerText = `(${formatTanggalIndo(tgl)})`;
+
+            // Kumpulkan himpunan ID dan NIS siswa yang sudah memiliki catatan absensi (H, T, I, S, atau A)
+            const absenIdSet = new Set();
+            const absenNisSet = new Set();
+            STATE.absensiHariIni.forEach(a => {
+                const idKey = String(a.id_siswa || '').trim();
+                const nisKey = String(a.nis || '').trim().toUpperCase();
+                if (idKey) absenIdSet.add(idKey);
+                if (nisKey) absenNisSet.add(nisKey);
+            });
+
+            // Saring siswa sesuai filter kelas yang belum tercatat absen sama sekali
+            const belumAbsenSemua = STATE.siswa
+                .filter(s => {
+                    if (filterKls && String(s.kelas || '').trim() !== filterKls) return false;
+                    const idKey = String(s.id_siswa || '').trim();
+                    const nisKey = String(s.nis || '').trim().toUpperCase();
+                    if (idKey && absenIdSet.has(idKey)) return false;
+                    if (nisKey && absenNisSet.has(nisKey)) return false;
+                    return true;
+                })
+                .sort((a, b) =>
+                    String(a.kelas || '').localeCompare(String(b.kelas || '')) ||
+                    String(a.nama || '').localeCompare(String(b.nama || ''))
+                );
+
+            // Perbarui badge jumlah total siswa belum absen (sesuai filter tanggal & kelas)
+            const badgeTotal = document.getElementById('badge-total-belum-absen');
+            if (badgeTotal) {
+                badgeTotal.innerText = `${belumAbsenSemua.length} Siswa`;
+                badgeTotal.className = belumAbsenSemua.length > 0
+                    ? 'badge bg-danger rounded-pill px-2 py-1'
+                    : 'badge bg-success rounded-pill px-2 py-1';
+            }
+
+            // Terapkan pencarian cepat NIS / Nama khusus tabel Belum Absen
+            const filteredList = keyword
+                ? belumAbsenSemua.filter(s =>
+                    String(s.nis || '').toLowerCase().includes(keyword) ||
+                    String(s.nama || '').toLowerCase().includes(keyword)
+                )
+                : belumAbsenSemua;
+
+            const totalItems = filteredList.length;
+            const totalPages = Math.max(1, Math.ceil(totalItems / BELUM_ABSEN_PER_PAGE));
+
+            // Jika data berkurang dan halaman saat ini melebihi total halaman, geser otomatis ke halaman terakhir yang valid
+            if (STATE.belumAbsenPage > totalPages) {
+                STATE.belumAbsenPage = totalPages;
+            }
+            if (STATE.belumAbsenPage < 1) {
+                STATE.belumAbsenPage = 1;
+            }
+
+            const currentPage = STATE.belumAbsenPage;
+            const startIdx = (currentPage - 1) * BELUM_ABSEN_PER_PAGE;
+            const endIdx = Math.min(startIdx + BELUM_ABSEN_PER_PAGE, totalItems);
+            const pageItems = filteredList.slice(startIdx, endIdx);
+
+            const tbody = document.getElementById('tbody-dash-belum-absen');
+            const infoEl = document.getElementById('dash-belum-absen-info');
+            const pagEl = document.getElementById('dash-belum-absen-pagination');
+
+            if (totalItems === 0) {
+                const emptyMsg = belumAbsenSemua.length === 0
+                    ? '<i class="fas fa-check-circle text-success me-1"></i> Seluruh siswa pada filter ini sudah memiliki catatan absensi.'
+                    : `Tidak ditemukan siswa belum absen dengan kata kunci "${escapeHTML(keyword)}".`;
+                tbody.innerHTML = `<tr><td colspan="7" class="text-muted py-3">${emptyMsg}</td></tr>`;
+                if (infoEl) infoEl.innerText = 'Menampilkan 0 siswa';
+                if (pagEl) pagEl.innerHTML = '';
+                return;
+            }
+
+            tbody.innerHTML = pageItems.map((s, idx) => {
+                const rowNo = startIdx + idx + 1;
+                const safeIdArg = JSON.stringify(String(s.id_siswa || '')).replace(/"/g, '&quot;');
+                return `
+                    <tr>
+                        <td>${rowNo}</td>
+                        <td><span class="badge bg-secondary">${escapeHTML(s.nis)}</span></td>
+                        <td class="text-start fw-bold">${escapeHTML(s.nama)}</td>
+                        <td>${escapeHTML(s.jenis_kelamin)}</td>
+                        <td><span class="badge bg-dark">${escapeHTML(s.kelas)}</span></td>
+                        <td><span class="badge bg-danger bg-opacity-10 text-danger border border-danger">Belum Absen</span></td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-primary fw-bold py-0 px-2" onclick="quickInputManualBelumAbsen(${safeIdArg})">
+                                <i class="fas fa-edit me-1"></i> Input S/I/A
+                            </button>
+                        </td>
+                    </tr>`;
+            }).join('');
+
+            if (infoEl) {
+                infoEl.innerText = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} siswa (Halaman ${currentPage} dari ${totalPages})`;
+            }
+
+            renderBelumAbsenPagination(currentPage, totalPages);
+        }
+
+        /**
+         * Merender kontrol navigasi paginasi dengan tombol Sebelumnya, nomor halaman + elipsis pintar,
+         * dan tombol Berikutnya jika total halaman lebih dari 1.
+         */
+        function renderBelumAbsenPagination(currentPage, totalPages) {
+            const pagEl = document.getElementById('dash-belum-absen-pagination');
+            if (!pagEl) return;
+
+            if (totalPages <= 1) {
+                pagEl.innerHTML = '';
+                return;
+            }
+
+            const pages = [];
+            if (totalPages <= 7) {
+                for (let p = 1; p <= totalPages; p++) pages.push(p);
+            } else {
+                pages.push(1);
+                let start = Math.max(2, currentPage - 1);
+                let end = Math.min(totalPages - 1, currentPage + 1);
+
+                if (currentPage <= 3) {
+                    start = 2;
+                    end = 4;
+                } else if (currentPage >= totalPages - 2) {
+                    start = totalPages - 3;
+                    end = totalPages - 1;
+                }
+
+                if (start > 2) pages.push('...');
+                for (let p = start; p <= end; p++) pages.push(p);
+                if (end < totalPages - 1) pages.push('...');
+                pages.push(totalPages);
+            }
+
+            let html = `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <button type="button" class="page-link" onclick="goToBelumAbsenPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>&laquo; Sebelumnya</button>
+                </li>`;
+
+            pages.forEach(p => {
+                if (p === '...') {
+                    html += '<li class="page-item disabled"><span class="page-link">&hellip;</span></li>';
+                } else {
+                    html += `
+                        <li class="page-item ${p === currentPage ? 'active' : ''}">
+                            <button type="button" class="page-link fw-semibold" onclick="goToBelumAbsenPage(${p})">${p}</button>
+                        </li>`;
+                }
+            });
+
+            html += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <button type="button" class="page-link" onclick="goToBelumAbsenPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Berikutnya &raquo;</button>
+                </li>`;
+
+            pagEl.innerHTML = html;
+        }
+
+        function goToBelumAbsenPage(pageNum) {
+            STATE.belumAbsenPage = pageNum;
+            renderBelumAbsenTable();
+        }
+
+        /**
+         * Handler tombol cepat "Input S/I/A" dari tabel Daftar Siswa Belum Absen.
+         */
+        function quickInputManualBelumAbsen(idSiswa) {
+            const siswa = STATE.siswa.find(s => String(s.id_siswa || '').trim() === String(idSiswa || '').trim());
+            if (!siswa) return openModalAbsenManual();
+            openModalAbsenManual(siswa.kelas, siswa.id_siswa);
+        }
+
+        function openModalAbsenManual(preselectKelas = '', preselectIdSiswa = '') {
             document.getElementById('m-absen-tanggal').value = document.getElementById('dash-filter-tanggal').value || getTodayStr();
 
             // Isi dropdown kelas unik yang diurutkan alfabetis dari STATE.siswa
@@ -2027,11 +2313,18 @@
             selKelas.innerHTML = '<option value="">-- Pilih Kelas --</option>' +
                 kelasUnik.map(k => `<option value="${escapeHTML(k)}">${escapeHTML(k)}</option>`).join('');
 
-            // Otomatis ikuti filter kelas Dashboard jika sedang aktif memilih kelas tertentu
-            const dashKelas = document.getElementById('dash-filter-kelas').value;
-            selKelas.value = (dashKelas && kelasUnik.includes(dashKelas)) ? dashKelas : '';
+            // Prioritaskan kelas dari tombol cepat tabel Belum Absen; jika kosong, ikuti filter kelas Dashboard
+            const targetKelas = preselectKelas ? String(preselectKelas).trim() : document.getElementById('dash-filter-kelas').value;
+            selKelas.value = (targetKelas && kelasUnik.includes(targetKelas)) ? targetKelas : '';
 
             filterSiswaAbsenManual();
+
+            // Jika dipanggil dari tombol cepat tabel Belum Absen, otomatis pilih siswanya
+            if (preselectIdSiswa) {
+                const selSiswa = document.getElementById('m-absen-siswa');
+                selSiswa.value = String(preselectIdSiswa).trim();
+            }
+
             document.getElementById('m-absen-status').value = 'S';
             document.getElementById('m-absen-ket').value = '';
             new bootstrap.Modal(document.getElementById('modalAbsenManual')).show();
