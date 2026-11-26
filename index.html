@@ -295,6 +295,87 @@
                 background: #fff;
             }
         }
+		/* Navigasi Tab Profesional Halaman Rekap (Terpisah dari Sidebar .nav-item) */
+        .rekap-tab-bar {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 8px;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 6px;
+            margin-bottom: 16px;
+        }
+        .rekap-tab-btn {
+            flex: 1 1 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border: 1px solid transparent;
+            background: transparent;
+            color: #475569;
+            font-weight: 600;
+            font-size: 0.84rem;
+            padding: 10px 14px;
+            border-radius: 9px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            line-height: 1.25;
+        }
+        .rekap-tab-btn i {
+            font-size: 0.95rem;
+            flex-shrink: 0;
+        }
+
+        /* Aksen Warna Tab 1: Jumlah H.T.I.S.A (Per Hari / Bulan) - Indigo Biru */
+        .rekap-tab-btn.tab-waktu i { color: #4f46e5; }
+        .rekap-tab-btn.tab-waktu:hover:not(.active) {
+            background: #eef2ff;
+            color: #3730a3;
+        }
+        .rekap-tab-btn.tab-waktu.active {
+            background: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.28);
+        }
+
+        /* Aksen Warna Tab 2: Jumlah H.T.I.S.A per Siswa - Cyan Teal */
+        .rekap-tab-btn.tab-siswa i { color: #0891b2; }
+        .rekap-tab-btn.tab-siswa:hover:not(.active) {
+            background: #ecfeff;
+            color: #155e75;
+        }
+        .rekap-tab-btn.tab-siswa.active {
+            background: linear-gradient(135deg, #0891b2 0%, #0f766e 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(8, 145, 178, 0.28);
+        }
+
+        /* Aksen Warna Tab 3: Detail Log Scan - Slate Navy */
+        .rekap-tab-btn.tab-detail i { color: #334155; }
+        .rekap-tab-btn.tab-detail:hover:not(.active) {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+        .rekap-tab-btn.tab-detail.active {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(30, 41, 59, 0.28);
+        }
+
+        .rekap-tab-btn.active i { color: #ffffff; }
+
+        @media (max-width: 640px) {
+            .rekap-tab-bar {
+                flex-direction: column;
+            }
+            .rekap-tab-btn {
+                justify-content: flex-start;
+                padding: 10px 14px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -984,24 +1065,21 @@
                         </div>
                     </div>
 
-                    <!-- Navigasi Tab Tampilan Rekap -->
-                    <ul class="nav nav-tabs mb-3 fw-bold small">
-                        <li class="nav-item">
-                            <button type="button" class="nav-link active" id="tab-btn-rekap-waktu" onclick="switchRekapTab('waktu')">
-                                <i class="fas fa-calendar-alt me-1"></i> Jumlah H.T.I.S.A (Per Hari / Bulan)
-                            </button>
-                        </li>
-                        <li class="nav-item">
-                            <button type="button" class="nav-link" id="tab-btn-rekap-siswa" onclick="switchRekapTab('siswa')">
-                                <i class="fas fa-user-check me-1"></i> Jumlah H.T.I.S.A per Siswa
-                            </button>
-                        </li>
-                        <li class="nav-item">
-                            <button type="button" class="nav-link" id="tab-btn-rekap-detail" onclick="switchRekapTab('detail')">
-                                <i class="fas fa-list me-1"></i> Detail Log Scan
-                            </button>
-                        </li>
-                    </ul>
+                   <!-- Navigasi Tab Tampilan Rekap -->
+                    <div class="rekap-tab-bar" role="tablist">
+                        <button type="button" class="rekap-tab-btn tab-waktu active" id="tab-btn-rekap-waktu" onclick="switchRekapTab('waktu')">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>Jumlah H.T.I.S.A (Per Hari / Bulan)</span>
+                        </button>
+                        <button type="button" class="rekap-tab-btn tab-siswa" id="tab-btn-rekap-siswa" onclick="switchRekapTab('siswa')">
+                            <i class="fas fa-user-check"></i>
+                            <span>Jumlah H.T.I.S.A per Siswa</span>
+                        </button>
+                        <button type="button" class="rekap-tab-btn tab-detail" id="tab-btn-rekap-detail" onclick="switchRekapTab('detail')">
+                            <i class="fas fa-list-ul"></i>
+                            <span>Detail Log Scan</span>
+                        </button>
+                    </div>
 
                     <!-- TAB 1: REKAP JUMLAH H.T.I.S.A PER HARI / PER BULAN -->
                     <div id="panel-rekap-waktu">
@@ -1052,7 +1130,7 @@
                                 <ul id="rekap-waktu-pagination" class="pagination pagination-sm mb-0 flex-wrap justify-content-center"></ul>
                             </nav>
                         </div>
-                    </div>
+                     </div> <!-- Penutup #panel-rekap-waktu harus di bawah footer ini -->
                     </div>
 
                     <!-- TAB 2: REKAP JUMLAH H.T.I.S.A PER SISWA (PAGINASI 20 SISWA / HALAMAN) -->
