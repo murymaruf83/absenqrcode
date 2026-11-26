@@ -5031,6 +5031,7 @@
             const kls = document.getElementById('siswa-filter-kelas').value;
             const q = document.getElementById('siswa-search').value.trim().toLowerCase();
             const isAdmin = STATE.user && STATE.user.role === 'Admin';
+            updateTombolHapusKelas(kls, isAdmin);
 
             let list = STATE.siswa.filter(s => {
                 const matchKls = !kls || s.kelas === kls;
