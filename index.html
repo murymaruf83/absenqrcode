@@ -6040,9 +6040,103 @@
             setTimeout(() => { window.print(); }, 250);
         }
 
-        function cetakTabelHTML(judul,
-		 
-		 let LAST_IJIN_PULANG_REC = null;
+        function cetakTabelHTML(judul, subjudul, dataList, groupByKelas = false) {
+            const todayIndo = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            let rowsHtml = '';
+
+            if (!dataList || dataList.length === 0) {
+                const pesanKosong = groupByKelas
+                    ? 'Nihil — Tidak ada siswa Terlambat, Ijin, Sakit, atau Alpa pada tanggal ini.'
+                    : 'Belum ada data presensi.';
+                rowsHtml = `<tr><td colspan="10" style="padding:12px; font-style:italic;">${pesanKosong}</td></tr>`;
+            } else if (groupByKelas) {
+                let lastKelas = null;
+                rowsHtml = dataList.map((r, i) => {
+                    const klsKey = String(r.kelas || '-').trim();
+                    let headerRow = '';
+
+                    if (klsKey !== lastKelas) {
+                        lastKelas = klsKey;
+                        const rowsKelas = dataList.filter(x => String(x.kelas || '-').trim() === klsKey);
+                        const kT = rowsKelas.filter(x => String(x.status || '').trim().toUpperCase() === 'T').length;
+                        const kI = rowsKelas.filter(x => String(x.status || '').trim().toUpperCase() === 'I').length;
+                        const kS = rowsKelas.filter(x => String(x.status || '').trim().toUpperCase() === 'S').length;
+                        const kA = rowsKelas.filter(x => String(x.status || '').trim().toUpperCase() === 'A').length;
+                        const labelKls = (typeof formatLabelKelas === 'function')
+                            ? formatLabelKelas(klsKey)
+                            : `Kelas ${klsKey}`;
+
+                        headerRow = `
+                            <tr style="background:#e2e8f0; page-break-after:avoid; break-after:avoid;">
+                                <td colspan="10" style="text-align:left; font-weight:bold; padding:6px 8px; background:#e2e8f0; white-space:normal;">
+                                    ${escapeHTML(labelKls.toUpperCase())} &mdash; ${rowsKelas.length} Siswa (T: ${kT}, I: ${kI}, S: ${kS}, A: ${kA})
+                                </td>
+                            </tr>`;
+                    }
+
+                    return headerRow + `
+                        <tr>
+                            <td>${i + 1}</td>
+                            <td>${escapeHTML(r.tanggal)}</td>
+                            <td>${escapeHTML(r.nis)}</td>
+                            <td style="text-align:left;">${escapeHTML(r.nama)}</td>
+                            <td>${escapeHTML(r.jenis_kelamin)}</td>
+                            <td>${escapeHTML(r.kelas)}</td>
+                            <td>${escapeHTML(r.jam_masuk || '-')}</td>
+                            <td>${escapeHTML(r.jam_pulang || '-')}</td>
+                            <td><strong>${escapeHTML(r.status)}</strong></td>
+                            <td style="text-align:left;">${escapeHTML(r.keterangan || r.status_pulang || '-')}</td>
+                        </tr>`;
+                }).join('');
+            } else {
+                rowsHtml = dataList.map((r, i) => `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td>${escapeHTML(r.tanggal)}</td>
+                        <td>${escapeHTML(r.nis)}</td>
+                        <td style="text-align:left;">${escapeHTML(r.nama)}</td>
+                        <td>${escapeHTML(r.jenis_kelamin)}</td>
+                        <td>${escapeHTML(r.kelas)}</td>
+                        <td>${escapeHTML(r.jam_masuk || '-')}</td>
+                        <td>${escapeHTML(r.jam_pulang || '-')}</td>
+                        <td><strong>${escapeHTML(r.status)}</strong></td>
+                        <td style="text-align:left;">${escapeHTML(r.keterangan || r.status_pulang || '-')}</td>
+                    </tr>`).join('');
+            }
+
+            const container = document.getElementById('print-container-global');
+            container.innerHTML = `
+                <div style="font-family: 'Times New Roman', serif; color:#000;">
+                    <div style="text-align:center; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 14px;">
+                        <h3 style="margin:0; font-weight:bold;">${escapeHTML(STATE.pengaturan.nama_sekolah.toUpperCase())}</h3>
+                        <h4 style="margin:4px 0 0 0;">${escapeHTML(judul)}</h4>
+                        <div style="font-size:13px; margin-top:4px;">${escapeHTML(subjudul)}</div>
+                    </div>
+                    <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;" border="1">
+                        <thead>
+                            <tr style="background:#eee;">
+                                <th style="padding:5px;">No</th>
+                                <th style="padding:5px;">Tanggal</th>
+                                <th style="padding:5px;">NIS</th>
+                                <th style="padding:5px; text-align:left;">Nama Siswa</th>
+                                <th style="padding:5px;">L/P</th>
+                                <th style="padding:5px;">Kelas</th>
+                                <th style="padding:5px;">Masuk</th>
+                                <th style="padding:5px;">Pulang</th>
+                                <th style="padding:5px;">Status</th>
+                                <th style="padding:5px; text-align:left;">Keterangan</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                    <div style="width: 240px; float:right; text-align:center; margin-top: 28px; font-size: 13px;">
+                        ${todayIndo}<br>Petugas Piket / Admin<br><br><br><br>
+                        <strong>${escapeHTML(STATE.user ? STATE.user.nama : '__________________')}</strong>
+                    </div>
+                </div>`;
+            setTimeout(() => { window.print(); }, 250);
+        }
+             let LAST_IJIN_PULANG_REC = null;
 
         function cetakBlankoIjinPulangAktif() {
             if (!LAST_IJIN_PULANG_REC) {
