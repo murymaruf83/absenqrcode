@@ -5885,8 +5885,35 @@
         function cetakLaporanHarianPDF() {
             const tgl = document.getElementById('dash-filter-tanggal').value;
             const kls = document.getElementById('dash-filter-kelas').value;
-            const list = kls ? STATE.absensiHariIni.filter(a => a.kelas === kls) : STATE.absensiHariIni;
-            cetakTabelHTML("LAPORAN PRESENSI HARIAN GERBANG QR", `Tanggal: ${formatTanggalIndo(tgl)} | Kelas: ${kls || 'Semua Kelas'}`, list);
+            const statusTarget = ['T', 'I', 'S', 'A'];
+            const urutanStatus = { T: 1, I: 2, S: 3, A: 4 };
+
+            const list = (STATE.absensiHariIni || [])
+                .filter(a => {
+                    const matchKls = !kls || String(a.kelas || '').trim() === kls;
+                    const st = String(a.status || '').trim().toUpperCase();
+                    return matchKls && statusTarget.includes(st);
+                })
+                .sort((a, b) => {
+                    const sa = urutanStatus[String(a.status || '').trim().toUpperCase()] || 9;
+                    const sb = urutanStatus[String(b.status || '').trim().toUpperCase()] || 9;
+                    if (sa !== sb) return sa - sb;
+                    if (typeof getUrutanTingkat === 'function' && typeof getTingkatKelas === 'function') {
+                        const ta = getUrutanTingkat(getTingkatKelas(a.kelas));
+                        const tb = getUrutanTingkat(getTingkatKelas(b.kelas));
+                        if (ta !== tb) return ta - tb;
+                    }
+                    return String(a.kelas || '').localeCompare(String(b.kelas || ''), 'id', { numeric: true }) ||
+                        String(a.nama || '').localeCompare(String(b.nama || ''), 'id');
+                });
+
+            const cT = list.filter(r => String(r.status || '').trim().toUpperCase() === 'T').length;
+            const cI = list.filter(r => String(r.status || '').trim().toUpperCase() === 'I').length;
+            const cS = list.filter(r => String(r.status || '').trim().toUpperCase() === 'S').length;
+            const cA = list.filter(r => String(r.status || '').trim().toUpperCase() === 'A').length;
+
+            const subjudul = `Tanggal: ${formatTanggalIndo(tgl)} | Kelas: ${kls || 'Semua Kelas'} | Ringkasan: T=${cT}, I=${cI}, S=${cS}, A=${cA} (Total ${list.length} Siswa)`;
+            cetakTabelHTML("LAPORAN HARIAN SISWA TERLAMBAT, IJIN, SAKIT & ALPA", subjudul, list);
         }
 
         function cetakRekapPDF() {
