@@ -5895,16 +5895,22 @@
                     return matchKls && statusTarget.includes(st);
                 })
                 .sort((a, b) => {
-                    const sa = urutanStatus[String(a.status || '').trim().toUpperCase()] || 9;
-                    const sb = urutanStatus[String(b.status || '').trim().toUpperCase()] || 9;
-                    if (sa !== sb) return sa - sb;
+                    // 1. Urutkan berdasarkan Tingkat dan Nama Kelas terlebih dahulu (SD, SMP, SMA)
                     if (typeof getUrutanTingkat === 'function' && typeof getTingkatKelas === 'function') {
                         const ta = getUrutanTingkat(getTingkatKelas(a.kelas));
                         const tb = getUrutanTingkat(getTingkatKelas(b.kelas));
                         if (ta !== tb) return ta - tb;
                     }
-                    return String(a.kelas || '').localeCompare(String(b.kelas || ''), 'id', { numeric: true }) ||
-                        String(a.nama || '').localeCompare(String(b.nama || ''), 'id');
+                    const cmpKelas = String(a.kelas || '').localeCompare(String(b.kelas || ''), 'id', { numeric: true, sensitivity: 'base' });
+                    if (cmpKelas !== 0) return cmpKelas;
+
+                    // 2. Di dalam kelas yang sama, urutkan berdasarkan Status (T, I, S, A)
+                    const sa = urutanStatus[String(a.status || '').trim().toUpperCase()] || 9;
+                    const sb = urutanStatus[String(b.status || '').trim().toUpperCase()] || 9;
+                    if (sa !== sb) return sa - sb;
+
+                    // 3. Jika kelas dan status sama, urutkan berdasarkan Nama Siswa (A-Z)
+                    return String(a.nama || '').localeCompare(String(b.nama || ''), 'id', { sensitivity: 'base' });
                 });
 
             const cT = list.filter(r => String(r.status || '').trim().toUpperCase() === 'T').length;
