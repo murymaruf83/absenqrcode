@@ -889,9 +889,11 @@
             <div id="view-rekap" class="hidden">
                 <div class="card-custom">
                     <h5 class="fw-bold text-primary mb-3"><i class="fas fa-table me-2"></i> Rekapitulasi Presensi QR Gerbang</h5>
+
+                    <!-- Baris Filter Periode & Tombol Aksi -->
                     <div class="row g-2 align-items-end mb-3 bg-light p-3 rounded border">
-                        <div class="col-12 col-md-3">
-                            <label for="rekap-filter-tanggal" class="form-label small fw-bold">Tanggal (Opsional)</label>
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <label for="rekap-filter-tanggal" class="form-label small fw-bold mb-1">Tanggal (Opsional / Per Hari)</label>
                             <div class="input-group input-group-sm">
                                 <input type="date" id="rekap-filter-tanggal" class="form-control border-primary" onchange="onRekapTanggalChange()">
                                 <button type="button" class="btn btn-outline-secondary" onclick="resetRekapTanggal()" title="Hapus Filter Tanggal">
@@ -899,31 +901,37 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="col-6 col-md-2">
-                            <label for="rekap-filter-bulan" class="form-label small fw-bold">Bulan</label>
-                            <select id="rekap-filter-bulan" class="form-select form-select-sm border-primary" onchange="onRekapBulanChange()">
-                                <option value="all">Semua Bulan</option>
-                                <option value="01">Januari</option>
-                                <option value="02">Februari</option>
-                                <option value="03">Maret</option>
-                                <option value="04">April</option>
-                                <option value="05">Mei</option>
-                                <option value="06">Juni</option>
-                                <option value="07">Juli</option>
-                                <option value="08">Agustus</option>
-                                <option value="09">September</option>
-                                <option value="10">Oktober</option>
-                                <option value="11">November</option>
-                                <option value="12">Desember</option>
+                        <div class="col-6 col-lg-3">
+                            <label for="rekap-filter-bulan" class="form-label small fw-bold mb-1">Periode / Bulan</label>
+                            <select id="rekap-filter-bulan" class="form-select form-select-sm border-primary fw-semibold" onchange="onRekapBulanChange()">
+                                <optgroup label="Rekap Periode Panjang">
+                                    <option value="sem1">Semester 1 (Jul - Des)</option>
+                                    <option value="sem2">Semester 2 (Jan - Jun)</option>
+                                    <option value="all">1 Tahun Penuh (Jan - Des)</option>
+                                </optgroup>
+                                <optgroup label="Rekap Per Bulan">
+                                    <option value="01">Januari</option>
+                                    <option value="02">Februari</option>
+                                    <option value="03">Maret</option>
+                                    <option value="04">April</option>
+                                    <option value="05">Mei</option>
+                                    <option value="06">Juni</option>
+                                    <option value="07">Juli</option>
+                                    <option value="08">Agustus</option>
+                                    <option value="09">September</option>
+                                    <option value="10">Oktober</option>
+                                    <option value="11">November</option>
+                                    <option value="12">Desember</option>
+                                </optgroup>
                             </select>
                         </div>
-                        <div class="col-6 col-md-2">
-                            <label for="rekap-filter-kelas" class="form-label small fw-bold">Kelas</label>
-                            <select id="rekap-filter-kelas" class="form-select form-select-sm border-primary">
+                        <div class="col-6 col-lg-2">
+                            <label for="rekap-filter-kelas" class="form-label small fw-bold mb-1">Kelas</label>
+                            <select id="rekap-filter-kelas" class="form-select form-select-sm border-primary fw-semibold">
                                 <option value="">Semua Kelas</option>
                             </select>
                         </div>
-                        <div class="col-12 col-md-5 d-flex gap-2">
+                        <div class="col-12 col-lg-4 d-flex gap-2">
                             <button type="button" class="btn btn-sm btn-primary fw-bold flex-fill" onclick="loadRekapData()">
                                 <i class="fas fa-search me-1"></i> Tampilkan
                             </button>
@@ -936,27 +944,157 @@
                         </div>
                     </div>
 
-                    <div class="table-responsive">
-                        <table id="tabel-rekap-qr" class="table table-bordered table-striped table-sm align-middle text-center mb-0">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>No</th>
-                                    <th>Tanggal</th>
-                                    <th>NIS</th>
-                                    <th class="text-start">Nama Siswa</th>
-                                    <th>L/P</th>
-                                    <th>Kelas</th>
-                                    <th>Jam Masuk</th>
-                                    <th>Jam Pulang</th>
-                                    <th>Status</th>
-                                    <th>Status Pulang</th>
-                                    <th class="text-start">Keterangan / Alasan Ijin</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbody-rekap">
-                                <tr><td colspan="11" class="text-muted py-4">Pilih filter lalu klik <strong>Tampilkan</strong>.</td></tr>
-                            </tbody>
-                        </table>
+                    <!-- Strip Ringkasan Total H, T, I, S, A Periode Aktif -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-4 col-md-2">
+                            <div class="stat-card bg-success py-2">
+                                <h4 class="fw-bold m-0" id="rekap-sum-h">0</h4>
+                                <small>Hadir (H)</small>
+                            </div>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <div class="stat-card bg-orange py-2">
+                                <h4 class="fw-bold m-0" id="rekap-sum-t">0</h4>
+                                <small>Terlambat (T)</small>
+                            </div>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <div class="stat-card bg-primary py-2">
+                                <h4 class="fw-bold m-0" id="rekap-sum-i">0</h4>
+                                <small>Ijin (I)</small>
+                            </div>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <div class="stat-card bg-purple py-2">
+                                <h4 class="fw-bold m-0" id="rekap-sum-s">0</h4>
+                                <small>Sakit (S)</small>
+                            </div>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <div class="stat-card bg-danger py-2">
+                                <h4 class="fw-bold m-0" id="rekap-sum-a">0</h4>
+                                <small>Alpa (A)</small>
+                            </div>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <div class="stat-card bg-dark py-2">
+                                <h4 class="fw-bold m-0 text-warning" id="rekap-sum-persen">0%</h4>
+                                <small>Kehadiran</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Navigasi Tab Tampilan Rekap -->
+                    <ul class="nav nav-tabs mb-3 fw-bold small">
+                        <li class="nav-item">
+                            <button type="button" class="nav-link active" id="tab-btn-rekap-waktu" onclick="switchRekapTab('waktu')">
+                                <i class="fas fa-calendar-alt me-1"></i> Jumlah H.T.I.S.A (Per Hari / Bulan)
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button type="button" class="nav-link" id="tab-btn-rekap-siswa" onclick="switchRekapTab('siswa')">
+                                <i class="fas fa-user-check me-1"></i> Jumlah H.T.I.S.A per Siswa
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button type="button" class="nav-link" id="tab-btn-rekap-detail" onclick="switchRekapTab('detail')">
+                                <i class="fas fa-list me-1"></i> Detail Log Scan
+                            </button>
+                        </li>
+                    </ul>
+
+                    <!-- TAB 1: REKAP JUMLAH H.T.I.S.A PER HARI / PER BULAN -->
+                    <div id="panel-rekap-waktu">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                            <div class="small fw-bold text-dark" id="rekap-waktu-title">
+                                Ringkasan Jumlah H.T.I.S.A
+                            </div>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-primary fw-bold active" id="btn-mode-hari" onclick="setRekapGroupMode('hari')">
+                                    Per Hari
+                                </button>
+                                <button type="button" class="btn btn-outline-primary fw-bold" id="btn-mode-bulan" onclick="setRekapGroupMode('bulan')">
+                                    Per Bulan
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover table-sm align-middle text-center mb-0">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th width="5%">No</th>
+                                        <th id="th-rekap-waktu-label" width="18%">Tanggal</th>
+                                        <th class="bg-success">H</th>
+                                        <th class="bg-orange text-white">T</th>
+                                        <th class="bg-primary">I</th>
+                                        <th class="bg-purple text-white">S</th>
+                                        <th class="bg-danger">A</th>
+                                        <th>Total</th>
+                                        <th>% Hadir</th>
+                                        <th class="text-start">Keterangan Jumlah H.T.I.S.A</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-rekap-waktu">
+                                    <tr><td colspan="10" class="text-muted py-4">Pilih filter lalu klik <strong>Tampilkan</strong>.</td></tr>
+                                </tbody>
+                                <tfoot id="tfoot-rekap-waktu" class="table-secondary fw-bold"></tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: REKAP JUMLAH H.T.I.S.A PER SISWA -->
+                    <div id="panel-rekap-siswa" class="hidden">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped table-sm align-middle text-center mb-0">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th width="5%">No</th>
+                                        <th>NIS</th>
+                                        <th class="text-start">Nama Siswa</th>
+                                        <th>L/P</th>
+                                        <th>Kelas</th>
+                                        <th class="bg-success">H</th>
+                                        <th class="bg-orange text-white">T</th>
+                                        <th class="bg-primary">I</th>
+                                        <th class="bg-purple text-white">S</th>
+                                        <th class="bg-danger">A</th>
+                                        <th>Total</th>
+                                        <th>% Hadir</th>
+                                        <th class="text-start">Keterangan Jumlah H.T.I.S.A</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-rekap-siswa">
+                                    <tr><td colspan="13" class="text-muted py-4">Pilih filter lalu klik <strong>Tampilkan</strong>.</td></tr>
+                                </tbody>
+                                <tfoot id="tfoot-rekap-siswa" class="table-secondary fw-bold"></tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: DETAIL LOG SCAN HARIAN (TABEL ASLI) -->
+                    <div id="panel-rekap-detail" class="hidden">
+                        <div class="table-responsive">
+                            <table id="tabel-rekap-qr" class="table table-bordered table-striped table-sm align-middle text-center mb-0">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Tanggal</th>
+                                        <th>NIS</th>
+                                        <th class="text-start">Nama Siswa</th>
+                                        <th>L/P</th>
+                                        <th>Kelas</th>
+                                        <th>Jam Masuk</th>
+                                        <th>Jam Pulang</th>
+                                        <th>Status</th>
+                                        <th>Status Pulang</th>
+                                        <th class="text-start">Keterangan / Alasan Ijin</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-rekap">
+                                    <tr><td colspan="11" class="text-muted py-4">Pilih filter lalu klik <strong>Tampilkan</strong>.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3987,6 +4125,23 @@
         // 4. REKAP & LAPORAN (EXCEL & PDF)
         // =========================================================================
        function initRekapPage() {
+            const NAMA_BULAN_MAP = {
+            '01': 'Januari', '02': 'Februari', '03': 'Maret', '04': 'April',
+            '05': 'Mei', '06': 'Juni', '07': 'Juli', '08': 'Agustus',
+            '09': 'September', '10': 'Oktober', '11': 'November', '12': 'Desember'
+        };
+
+        let REKAP_STATE = {
+            activeTab: 'waktu',
+            groupMode: 'hari',
+            periodeCode: '',
+            periodeLabel: '',
+            summaryWaktu: [],
+            summarySiswa: [],
+            totals: { h: 0, t: 0, i: 0, s: 0, a: 0, total: 0, persen: 0 }
+        };
+
+        function initRekapPage() {
             const blnNow = String(new Date().getMonth() + 1).padStart(2, '0');
             document.getElementById('rekap-filter-bulan').value = blnNow;
             const tglEl = document.getElementById('rekap-filter-tanggal');
@@ -4012,21 +4167,299 @@
             loadRekapData();
         }
 
+        function switchRekapTab(tabName) {
+            REKAP_STATE.activeTab = tabName;
+            ['waktu', 'siswa', 'detail'].forEach(t => {
+                const btn = document.getElementById('tab-btn-rekap-' + t);
+                const panel = document.getElementById('panel-rekap-' + t);
+                if (btn) btn.classList.toggle('active', t === tabName);
+                if (panel) panel.classList.toggle('hidden', t !== tabName);
+            });
+        }
+
+        function setRekapGroupMode(mode) {
+            REKAP_STATE.groupMode = mode;
+            const btnHari = document.getElementById('btn-mode-hari');
+            const btnBulan = document.getElementById('btn-mode-bulan');
+            if (btnHari) btnHari.classList.toggle('active', mode === 'hari');
+            if (btnBulan) btnBulan.classList.toggle('active', mode === 'bulan');
+            buildRekapWaktuSummary();
+            renderRekapWaktuTable();
+        }
+
+        function hitungHTISAStats(list) {
+            let h = 0, t = 0, i = 0, s = 0, a = 0;
+            list.forEach(r => {
+                const st = String(r.status || '').trim().toUpperCase();
+                if (st === 'H') h++;
+                else if (st === 'T') t++;
+                else if (st === 'I') i++;
+                else if (st === 'S') s++;
+                else if (st === 'A') a++;
+            });
+            const total = h + t + i + s + a;
+            const persen = total > 0 ? Number((((h + t) / total) * 100).toFixed(1)) : 0;
+            const keterangan = total > 0
+                ? `H: ${h} | T: ${t} | I: ${i} | S: ${s} | A: ${a} (Hadir ${persen}%)`
+                : 'Belum ada data presensi';
+            return { h, t, i, s, a, total, persen, keterangan };
+        }
+
         function loadRekapData() {
-            const bln = document.getElementById('rekap-filter-bulan').value;
+            const periodeVal = document.getElementById('rekap-filter-bulan').value;
             const kls = document.getElementById('rekap-filter-kelas').value;
             const tglEl = document.getElementById('rekap-filter-tanggal');
             const tgl = tglEl ? tglEl.value : '';
-            const targetBln = (tgl && tgl.length >= 7) ? tgl.substring(5, 7) : bln;
 
-            callBackend('getRekap_server', [targetBln, kls], (res) => {
+            // Untuk sem1, sem2, atau all, ambil semua bulan dari backend lalu saring di frontend
+            let apiBulan = 'all';
+            if (tgl && tgl.length >= 7) {
+                apiBulan = tgl.substring(5, 7);
+            } else if (/^\d{2}$/.test(periodeVal)) {
+                apiBulan = periodeVal;
+            }
+
+            callBackend('getRekap_server', [apiBulan, kls], (res) => {
                 let rows = (res && res.absensi) ? res.absensi : [];
+                if (res && Array.isArray(res.siswa) && res.siswa.length > 0) {
+                    STATE.siswa = res.siswa;
+                }
+
                 if (tgl) {
                     rows = rows.filter(r => String(r.tanggal || '').trim() === tgl);
+                    REKAP_STATE.periodeCode = 'tgl';
+                    REKAP_STATE.periodeLabel = `Tanggal ${formatTanggalIndo(tgl)}`;
+                    REKAP_STATE.groupMode = 'hari';
+                } else if (periodeVal === 'sem1') {
+                    rows = rows.filter(r => {
+                        const m = parseInt(String(r.tanggal || '').substring(5, 7), 10);
+                        return m >= 7 && m <= 12;
+                    });
+                    REKAP_STATE.periodeCode = 'sem1';
+                    REKAP_STATE.periodeLabel = 'Semester 1 (Juli - Desember)';
+                    REKAP_STATE.groupMode = 'bulan';
+                } else if (periodeVal === 'sem2') {
+                    rows = rows.filter(r => {
+                        const m = parseInt(String(r.tanggal || '').substring(5, 7), 10);
+                        return m >= 1 && m <= 6;
+                    });
+                    REKAP_STATE.periodeCode = 'sem2';
+                    REKAP_STATE.periodeLabel = 'Semester 2 (Januari - Juni)';
+                    REKAP_STATE.groupMode = 'bulan';
+                } else if (periodeVal === 'all') {
+                    REKAP_STATE.periodeCode = 'all';
+                    REKAP_STATE.periodeLabel = '1 Tahun Penuh (Januari - Desember)';
+                    REKAP_STATE.groupMode = 'bulan';
+                } else {
+                    REKAP_STATE.periodeCode = periodeVal;
+                    REKAP_STATE.periodeLabel = `Bulan ${NAMA_BULAN_MAP[periodeVal] || periodeVal}`;
+                    REKAP_STATE.groupMode = 'hari';
                 }
+
                 STATE.rekapData = rows;
+                REKAP_STATE.totals = hitungHTISAStats(rows);
+
+                // Perbarui strip angka ringkasan atas
+                document.getElementById('rekap-sum-h').innerText = REKAP_STATE.totals.h;
+                document.getElementById('rekap-sum-t').innerText = REKAP_STATE.totals.t;
+                document.getElementById('rekap-sum-i').innerText = REKAP_STATE.totals.i;
+                document.getElementById('rekap-sum-s').innerText = REKAP_STATE.totals.s;
+                document.getElementById('rekap-sum-a').innerText = REKAP_STATE.totals.a;
+                document.getElementById('rekap-sum-persen').innerText = `${REKAP_STATE.totals.persen}%`;
+
+                // Sinkronkan tombol Per Hari / Per Bulan
+                const btnHari = document.getElementById('btn-mode-hari');
+                const btnBulan = document.getElementById('btn-mode-bulan');
+                if (btnHari) btnHari.classList.toggle('active', REKAP_STATE.groupMode === 'hari');
+                if (btnBulan) btnBulan.classList.toggle('active', REKAP_STATE.groupMode === 'bulan');
+
+                buildRekapWaktuSummary();
+                buildRekapSiswaSummary(kls);
+
+                renderRekapWaktuTable();
+                renderRekapSiswaTable();
                 renderTableRekap();
             }, "Memuat Rekap...");
+        }
+
+        function buildRekapWaktuSummary() {
+            const rows = STATE.rekapData || [];
+            const mode = REKAP_STATE.groupMode;
+            const hasil = [];
+
+            if (mode === 'bulan') {
+                let daftarBulan = [];
+                if (REKAP_STATE.periodeCode === 'sem1') {
+                    daftarBulan = ['07', '08', '09', '10', '11', '12'];
+                } else if (REKAP_STATE.periodeCode === 'sem2') {
+                    daftarBulan = ['01', '02', '03', '04', '05', '06'];
+                } else if (REKAP_STATE.periodeCode === 'all') {
+                    daftarBulan = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+                } else {
+                    const blnAktif = document.getElementById('rekap-filter-bulan').value;
+                    daftarBulan = /^\d{2}$/.test(blnAktif) ? [blnAktif] : ['01','02','03','04','05','06','07','08','09','10','11','12'];
+                }
+
+                daftarBulan.forEach(mm => {
+                    const subset = rows.filter(r => String(r.tanggal || '').substring(5, 7) === mm);
+                    const st = hitungHTISAStats(subset);
+                    hasil.push({
+                        label: NAMA_BULAN_MAP[mm] || mm,
+                        ...st
+                    });
+                });
+            } else {
+                const mapTgl = {};
+                rows.forEach(r => {
+                    const tglKey = String(r.tanggal || '').trim();
+                    if (!tglKey) return;
+                    if (!mapTgl[tglKey]) mapTgl[tglKey] = [];
+                    mapTgl[tglKey].push(r);
+                });
+
+                Object.keys(mapTgl).sort().forEach(tglKey => {
+                    const st = hitungHTISAStats(mapTgl[tglKey]);
+                    hasil.push({
+                        label: formatTanggalIndo(tglKey),
+                        rawDate: tglKey,
+                        ...st
+                    });
+                });
+            }
+
+            REKAP_STATE.summaryWaktu = hasil;
+        }
+
+        function buildRekapSiswaSummary(filterKelas) {
+            const rows = STATE.rekapData || [];
+            const siswaList = (STATE.siswa || []).filter(s => !filterKelas || String(s.kelas || '').trim() === filterKelas);
+
+            const mapSiswa = {};
+            siswaList.forEach(s => {
+                const key = String(s.nis || '').trim().toUpperCase();
+                if (!key) return;
+                mapSiswa[key] = {
+                    nis: s.nis,
+                    nama: s.nama,
+                    jenis_kelamin: s.jenis_kelamin,
+                    kelas: s.kelas,
+                    records: []
+                };
+            });
+
+            rows.forEach(r => {
+                const key = String(r.nis || '').trim().toUpperCase();
+                if (!key) return;
+                if (!mapSiswa[key]) {
+                    mapSiswa[key] = {
+                        nis: r.nis,
+                        nama: r.nama,
+                        jenis_kelamin: r.jenis_kelamin,
+                        kelas: r.kelas,
+                        records: []
+                    };
+                }
+                mapSiswa[key].records.push(r);
+            });
+
+            REKAP_STATE.summarySiswa = Object.values(mapSiswa)
+                .sort((a, b) => String(a.kelas || '').localeCompare(String(b.kelas || '')) || String(a.nama || '').localeCompare(String(b.nama || '')))
+                .map(item => ({
+                    nis: item.nis,
+                    nama: item.nama,
+                    jenis_kelamin: item.jenis_kelamin,
+                    kelas: item.kelas,
+                    ...hitungHTISAStats(item.records)
+                }));
+        }
+
+        function renderRekapWaktuTable() {
+            const tb = document.getElementById('tbody-rekap-waktu');
+            const tf = document.getElementById('tfoot-rekap-waktu');
+            const titleEl = document.getElementById('rekap-waktu-title');
+            const thLabel = document.getElementById('th-rekap-waktu-label');
+            const list = REKAP_STATE.summaryWaktu || [];
+            const tot = REKAP_STATE.totals;
+
+            const modeText = REKAP_STATE.groupMode === 'bulan' ? 'Per Bulan' : 'Per Hari (Per Tanggal)';
+            if (titleEl) titleEl.innerText = `Rekap Jumlah H.T.I.S.A ${modeText} — ${REKAP_STATE.periodeLabel}`;
+            if (thLabel) thLabel.innerText = REKAP_STATE.groupMode === 'bulan' ? 'Bulan' : 'Tanggal';
+
+            if (list.length === 0) {
+                tb.innerHTML = '<tr><td colspan="10" class="text-muted py-4">Tidak ada data presensi pada periode dan kelas ini.</td></tr>';
+                tf.innerHTML = '';
+                return;
+            }
+
+            tb.innerHTML = list.map((r, idx) => `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td class="fw-bold">${escapeHTML(r.label)}</td>
+                    <td class="fw-bold text-success">${r.h}</td>
+                    <td class="fw-bold text-orange">${r.t}</td>
+                    <td class="fw-bold text-primary">${r.i}</td>
+                    <td class="fw-bold text-purple">${r.s}</td>
+                    <td class="fw-bold text-danger">${r.a}</td>
+                    <td class="fw-bold">${r.total}</td>
+                    <td><span class="badge ${r.total === 0 ? 'bg-secondary' : (r.persen >= 85 ? 'bg-success' : (r.persen >= 70 ? 'bg-warning text-dark' : 'bg-danger'))}">${r.persen}%</span></td>
+                    <td class="text-start small">${escapeHTML(r.keterangan)}</td>
+                </tr>`).join('');
+
+            tf.innerHTML = `
+                <tr>
+                    <td colspan="2">TOTAL (${escapeHTML(REKAP_STATE.periodeLabel)})</td>
+                    <td class="text-success">${tot.h}</td>
+                    <td class="text-orange">${tot.t}</td>
+                    <td class="text-primary">${tot.i}</td>
+                    <td class="text-purple">${tot.s}</td>
+                    <td class="text-danger">${tot.a}</td>
+                    <td>${tot.total}</td>
+                    <td>${tot.persen}%</td>
+                    <td class="text-start small">${escapeHTML(tot.keterangan)}</td>
+                </tr>`;
+        }
+
+        function renderRekapSiswaTable() {
+            const tb = document.getElementById('tbody-rekap-siswa');
+            const tf = document.getElementById('tfoot-rekap-siswa');
+            const list = REKAP_STATE.summarySiswa || [];
+            const tot = REKAP_STATE.totals;
+
+            if (list.length === 0) {
+                tb.innerHTML = '<tr><td colspan="13" class="text-muted py-4">Tidak ada data siswa pada kelas yang dipilih.</td></tr>';
+                tf.innerHTML = '';
+                return;
+            }
+
+            tb.innerHTML = list.map((r, idx) => `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td><span class="badge bg-secondary">${escapeHTML(r.nis)}</span></td>
+                    <td class="text-start fw-bold">${escapeHTML(r.nama)}</td>
+                    <td>${escapeHTML(r.jenis_kelamin)}</td>
+                    <td><span class="badge bg-dark">${escapeHTML(r.kelas)}</span></td>
+                    <td class="fw-bold text-success">${r.h}</td>
+                    <td class="fw-bold text-orange">${r.t}</td>
+                    <td class="fw-bold text-primary">${r.i}</td>
+                    <td class="fw-bold text-purple">${r.s}</td>
+                    <td class="fw-bold text-danger">${r.a}</td>
+                    <td class="fw-bold">${r.total}</td>
+                    <td><span class="badge ${r.total === 0 ? 'bg-secondary' : (r.persen >= 85 ? 'bg-success' : (r.persen >= 70 ? 'bg-warning text-dark' : 'bg-danger'))}">${r.persen}%</span></td>
+                    <td class="text-start small">${escapeHTML(r.keterangan)}</td>
+                </tr>`).join('');
+
+            tf.innerHTML = `
+                <tr>
+                    <td colspan="5">TOTAL KESELURUHAN (${list.length} Siswa)</td>
+                    <td class="text-success">${tot.h}</td>
+                    <td class="text-orange">${tot.t}</td>
+                    <td class="text-primary">${tot.i}</td>
+                    <td class="text-purple">${tot.s}</td>
+                    <td class="text-danger">${tot.a}</td>
+                    <td>${tot.total}</td>
+                    <td>${tot.persen}%</td>
+                    <td class="text-start small">${escapeHTML(tot.keterangan)}</td>
+                </tr>`;
         }
 
         function renderTableRekap() {
@@ -4052,8 +4485,60 @@
         }
 
         function exportRekapExcel() {
-            if (STATE.rekapData.length === 0) return customAlert("Tidak ada data untuk diekspor ke Excel.");
-            const rows = STATE.rekapData.map((r, idx) => ({
+            if (STATE.rekapData.length === 0 && REKAP_STATE.summaryWaktu.length === 0) {
+                return customAlert("Tidak ada data untuk diekspor ke Excel.");
+            }
+
+            const wb = XLSX.utils.book_new();
+            const tot = REKAP_STATE.totals;
+
+            // Sheet 1: Rekap Jumlah H.T.I.S.A Per Hari / Per Bulan
+            const waktuRows = REKAP_STATE.summaryWaktu.map((r, idx) => ({
+                No: idx + 1,
+                Periode: r.label,
+                Hadir_H: r.h,
+                Terlambat_T: r.t,
+                Ijin_I: r.i,
+                Sakit_S: r.s,
+                Alpa_A: r.a,
+                Total: r.total,
+                Persentase_Hadir: `${r.persen}%`,
+                Keterangan_HTISA: r.keterangan
+            }));
+            waktuRows.push({
+                No: '',
+                Periode: `TOTAL (${REKAP_STATE.periodeLabel})`,
+                Hadir_H: tot.h,
+                Terlambat_T: tot.t,
+                Ijin_I: tot.i,
+                Sakit_S: tot.s,
+                Alpa_A: tot.a,
+                Total: tot.total,
+                Persentase_Hadir: `${tot.persen}%`,
+                Keterangan_HTISA: tot.keterangan
+            });
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(waktuRows), "Rekap_HTISA_Periode");
+
+            // Sheet 2: Rekap Jumlah H.T.I.S.A Per Siswa
+            const siswaRows = REKAP_STATE.summarySiswa.map((r, idx) => ({
+                No: idx + 1,
+                NIS: r.nis,
+                Nama_Siswa: r.nama,
+                L_P: r.jenis_kelamin,
+                Kelas: r.kelas,
+                Hadir_H: r.h,
+                Terlambat_T: r.t,
+                Ijin_I: r.i,
+                Sakit_S: r.s,
+                Alpa_A: r.a,
+                Total: r.total,
+                Persentase_Hadir: `${r.persen}%`,
+                Keterangan_HTISA: r.keterangan
+            }));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(siswaRows), "Rekap_HTISA_Siswa");
+
+            // Sheet 3: Detail Log Scan
+            const detailRows = STATE.rekapData.map((r, idx) => ({
                 No: idx + 1,
                 Tanggal: r.tanggal,
                 NIS: r.nis,
@@ -4066,11 +4551,11 @@
                 Status_Pulang: r.status_pulang || '-',
                 Keterangan: r.keterangan || '-'
             }));
-            const ws = XLSX.utils.json_to_sheet(rows);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Rekap_QR");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detailRows), "Detail_Log_Scan");
+
             const tgl = document.getElementById('rekap-filter-tanggal').value;
-            XLSX.writeFile(wb, `Rekap_Absensi_QR_${tgl || getTodayStr()}.xlsx`);
+            const suffix = tgl || REKAP_STATE.periodeCode || getTodayStr();
+            XLSX.writeFile(wb, `Rekap_Absensi_QR_${suffix}.xlsx`);
         }
 
         function cetakLaporanHarianPDF() {
@@ -4081,12 +4566,121 @@
         }
 
         function cetakRekapPDF() {
-            if (STATE.rekapData.length === 0) return customAlert("Tidak ada data rekap untuk dicetak.");
-            const tgl = document.getElementById('rekap-filter-tanggal').value;
-            const blnText = document.getElementById('rekap-filter-bulan').selectedOptions[0].text;
             const kls = document.getElementById('rekap-filter-kelas').value;
-            const labelPeriode = tgl ? `Tanggal: ${formatTanggalIndo(tgl)}` : `Periode: ${blnText}`;
-            cetakTabelHTML("REKAPITULASI PRESENSI GERBANG QR", `${labelPeriode} | Kelas: ${kls || 'Semua Kelas'}`, STATE.rekapData);
+            const subjudul = `Periode: ${REKAP_STATE.periodeLabel} | Kelas: ${kls || 'Semua Kelas'}`;
+
+            if (REKAP_STATE.activeTab === 'detail') {
+                if (STATE.rekapData.length === 0) return customAlert("Tidak ada data log rekap untuk dicetak.");
+                return cetakTabelHTML("REKAPITULASI DETAIL PRESENSI GERBANG QR", subjudul, STATE.rekapData);
+            }
+
+            const tot = REKAP_STATE.totals;
+            const todayIndo = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            const isTabSiswa = REKAP_STATE.activeTab === 'siswa';
+            const judul = isTabSiswa
+                ? "REKAPITULASI JUMLAH H.T.I.S.A PER SISWA"
+                : `REKAPITULASI JUMLAH H.T.I.S.A (${REKAP_STATE.groupMode === 'bulan' ? 'PER BULAN' : 'PER HARI'})`;
+
+            let theadHtml = '';
+            let tbodyHtml = '';
+
+            if (isTabSiswa) {
+                const list = REKAP_STATE.summarySiswa || [];
+                if (list.length === 0) return customAlert("Tidak ada data rekap siswa untuk dicetak.");
+                theadHtml = `
+                    <tr style="background:#eee;">
+                        <th style="padding:5px;">No</th>
+                        <th style="padding:5px;">NIS</th>
+                        <th style="padding:5px; text-align:left;">Nama Siswa</th>
+                        <th style="padding:5px;">L/P</th>
+                        <th style="padding:5px;">Kelas</th>
+                        <th style="padding:5px;">H</th>
+                        <th style="padding:5px;">T</th>
+                        <th style="padding:5px;">I</th>
+                        <th style="padding:5px;">S</th>
+                        <th style="padding:5px;">A</th>
+                        <th style="padding:5px;">Total</th>
+                        <th style="padding:5px;">% Hadir</th>
+                        <th style="padding:5px; text-align:left;">Keterangan H.T.I.S.A</th>
+                    </tr>`;
+                tbodyHtml = list.map((r, i) => `
+                    <tr>
+                        <td style="padding:4px;">${i + 1}</td>
+                        <td style="padding:4px;">${escapeHTML(r.nis)}</td>
+                        <td style="padding:4px; text-align:left;">${escapeHTML(r.nama)}</td>
+                        <td style="padding:4px;">${escapeHTML(r.jenis_kelamin)}</td>
+                        <td style="padding:4px;">${escapeHTML(r.kelas)}</td>
+                        <td style="padding:4px;">${r.h}</td>
+                        <td style="padding:4px;">${r.t}</td>
+                        <td style="padding:4px;">${r.i}</td>
+                        <td style="padding:4px;">${r.s}</td>
+                        <td style="padding:4px;">${r.a}</td>
+                        <td style="padding:4px;"><strong>${r.total}</strong></td>
+                        <td style="padding:4px;"><strong>${r.persen}%</strong></td>
+                        <td style="padding:4px; text-align:left;">${escapeHTML(r.keterangan)}</td>
+                    </tr>`).join('') + `
+                    <tr style="background:#f3f3f3; font-weight:bold;">
+                        <td colspan="5" style="padding:5px;">TOTAL KESELURUHAN</td>
+                        <td>${tot.h}</td><td>${tot.t}</td><td>${tot.i}</td><td>${tot.s}</td><td>${tot.a}</td>
+                        <td>${tot.total}</td><td>${tot.persen}%</td>
+                        <td style="text-align:left; padding:5px;">${escapeHTML(tot.keterangan)}</td>
+                    </tr>`;
+            } else {
+                const list = REKAP_STATE.summaryWaktu || [];
+                if (list.length === 0) return customAlert("Tidak ada data rekap untuk dicetak.");
+                const lblCol = REKAP_STATE.groupMode === 'bulan' ? 'Bulan' : 'Tanggal';
+                theadHtml = `
+                    <tr style="background:#eee;">
+                        <th style="padding:5px;">No</th>
+                        <th style="padding:5px;">${lblCol}</th>
+                        <th style="padding:5px;">H</th>
+                        <th style="padding:5px;">T</th>
+                        <th style="padding:5px;">I</th>
+                        <th style="padding:5px;">S</th>
+                        <th style="padding:5px;">A</th>
+                        <th style="padding:5px;">Total</th>
+                        <th style="padding:5px;">% Hadir</th>
+                        <th style="padding:5px; text-align:left;">Keterangan H.T.I.S.A</th>
+                    </tr>`;
+                tbodyHtml = list.map((r, i) => `
+                    <tr>
+                        <td style="padding:4px;">${i + 1}</td>
+                        <td style="padding:4px; font-weight:bold;">${escapeHTML(r.label)}</td>
+                        <td style="padding:4px;">${r.h}</td>
+                        <td style="padding:4px;">${r.t}</td>
+                        <td style="padding:4px;">${r.i}</td>
+                        <td style="padding:4px;">${r.s}</td>
+                        <td style="padding:4px;">${r.a}</td>
+                        <td style="padding:4px;"><strong>${r.total}</strong></td>
+                        <td style="padding:4px;"><strong>${r.persen}%</strong></td>
+                        <td style="padding:4px; text-align:left;">${escapeHTML(r.keterangan)}</td>
+                    </tr>`).join('') + `
+                    <tr style="background:#f3f3f3; font-weight:bold;">
+                        <td colspan="2" style="padding:5px;">TOTAL</td>
+                        <td>${tot.h}</td><td>${tot.t}</td><td>${tot.i}</td><td>${tot.s}</td><td>${tot.a}</td>
+                        <td>${tot.total}</td><td>${tot.persen}%</td>
+                        <td style="text-align:left; padding:5px;">${escapeHTML(tot.keterangan)}</td>
+                    </tr>`;
+            }
+
+            const container = document.getElementById('print-container-global');
+            container.innerHTML = `
+                <div style="font-family: 'Times New Roman', serif; color:#000;">
+                    <div style="text-align:center; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 14px;">
+                        <h3 style="margin:0; font-weight:bold;">${escapeHTML(STATE.pengaturan.nama_sekolah.toUpperCase())}</h3>
+                        <h4 style="margin:4px 0 0 0;">${judul}</h4>
+                        <div style="font-size:13px; margin-top:4px;">${escapeHTML(subjudul)}</div>
+                    </div>
+                    <table style="width:100%; border-collapse:collapse; font-size:11.5px; text-align:center;" border="1">
+                        <thead>${theadHtml}</thead>
+                        <tbody>${tbodyHtml}</tbody>
+                    </table>
+                    <div style="width: 240px; float:right; text-align:center; margin-top: 28px; font-size: 13px;">
+                        ${todayIndo}<br>Petugas Piket / Admin<br><br><br><br>
+                        <strong>${escapeHTML(STATE.user ? STATE.user.nama : '__________________')}</strong>
+                    </div>
+                </div>`;
+            setTimeout(() => { window.print(); }, 250);
         }
 
         function cetakTabelHTML(judul, subjudul, dataList) {
