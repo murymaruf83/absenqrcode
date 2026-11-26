@@ -521,6 +521,55 @@
             width: 100%;
             height: 270px;
         }
+		
+		/* Kartu & Medali Halaman Prestasi Siswa Disiplin */
+        .prestasi-kelas-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-top: 4px solid #4f46e5;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+            height: 100%;
+        }
+        .prestasi-rank-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            margin-bottom: 8px;
+        }
+        .prestasi-rank-item:last-child { margin-bottom: 0; }
+        .prestasi-rank-item.rank-1 {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            border-color: #f59e0b;
+        }
+        .prestasi-rank-item.rank-2 {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-color: #94a3b8;
+        }
+        .prestasi-rank-item.rank-3 {
+            background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+            border-color: #fb923c;
+        }
+        .prestasi-medal {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+            color: #fff;
+        }
+        .prestasi-medal.m-1 { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .prestasi-medal.m-2 { background: linear-gradient(135deg, #64748b, #475569); }
+        .prestasi-medal.m-3 { background: linear-gradient(135deg, #ea580c, #c2410c); }
     </style>
 </head>
 <body>
@@ -635,6 +684,9 @@
             </div>
 			<div class="nav-item" id="nav-grafik" onclick="navigate('grafik')">
                 <i class="fas fa-chart-bar"></i> <span>Grafik</span>
+            </div>
+			<div class="nav-item" id="nav-prestasi" onclick="navigate('prestasi')">
+                <i class="fas fa-trophy"></i> <span>Prestasi</span>
             </div>
             <div class="nav-item admin-only" id="nav-pengaturan" onclick="navigate('pengaturan')">
                 <i class="fas fa-sliders-h"></i> <span>Pengaturan</span>
@@ -1912,6 +1964,118 @@
                 </div>
             </div>
 			
+			<!-- ================================================================= -->
+            <!-- 4E. VIEW PRESTASI SISWA DISIPLIN (TOP 3 PER KELAS)                -->
+            <!-- ================================================================= -->
+            <div id="view-prestasi" class="hidden">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <h5 class="fw-bold text-primary m-0">
+                            <i class="fas fa-trophy text-warning me-2"></i> Prestasi Kedisiplinan Siswa (Top 3 per Kelas)
+                        </h5>
+                        <span id="prestasi-label-periode" class="badge bg-light text-primary border border-primary"></span>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-danger fw-bold px-3 shadow-sm" onclick="cetakPrestasiPDF()">
+                        <i class="fas fa-file-pdf me-1"></i> Cetak PDF Prestasi
+                    </button>
+                </div>
+
+                <!-- Panel Filter Periode, Tingkat, Kelas & Kriteria -->
+                <div class="card-custom border border-primary mb-3">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <label for="prestasi-filter-tanggal" class="form-label small fw-bold mb-1">Tanggal (Opsional / Per Hari)</label>
+                            <div class="input-group input-group-sm">
+                                <input type="date" id="prestasi-filter-tanggal" class="form-control border-primary" onchange="onPrestasiTanggalChange()">
+                                <button type="button" class="btn btn-outline-secondary" onclick="resetPrestasiTanggal()" title="Hapus Filter Tanggal">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <label for="prestasi-filter-periode" class="form-label small fw-bold mb-1">Periode / Bulan</label>
+                            <select id="prestasi-filter-periode" class="form-select form-select-sm border-primary fw-semibold" onchange="onPrestasiPeriodeChange()">
+                                <optgroup label="Periode Panjang">
+                                    <option value="sem1">Semester 1 (Juli - Desember)</option>
+                                    <option value="sem2">Semester 2 (Januari - Juni)</option>
+                                    <option value="all">1 Tahun Penuh (Januari - Desember)</option>
+                                </optgroup>
+                                <optgroup label="Per Bulan (12 Bulan)">
+                                    <option value="01">Januari</option>
+                                    <option value="02">Februari</option>
+                                    <option value="03">Maret</option>
+                                    <option value="04">April</option>
+                                    <option value="05">Mei</option>
+                                    <option value="06">Juni</option>
+                                    <option value="07">Juli</option>
+                                    <option value="08">Agustus</option>
+                                    <option value="09">September</option>
+                                    <option value="10">Oktober</option>
+                                    <option value="11">November</option>
+                                    <option value="12">Desember</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="col-6 col-lg-2">
+                            <label for="prestasi-filter-tingkat" class="form-label small fw-bold mb-1">Tingkat</label>
+                            <select id="prestasi-filter-tingkat" class="form-select form-select-sm border-primary fw-semibold" onchange="renderPrestasiUI()">
+                                <option value="">Semua Tingkat</option>
+                            </select>
+                        </div>
+                        <div class="col-8 col-lg-2">
+                            <label for="prestasi-filter-kelas" class="form-label small fw-bold mb-1">Kelas</label>
+                            <select id="prestasi-filter-kelas" class="form-select form-select-sm border-primary fw-semibold" onchange="renderPrestasiUI()">
+                                <option value="">Semua Kelas</option>
+                            </select>
+                        </div>
+                        <div class="col-4 col-lg-2">
+                            <button type="button" class="btn btn-sm btn-primary w-100 fw-bold" onclick="loadPrestasiData()">
+                                <i class="fas fa-search me-1"></i> Tampilkan
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2 pt-2 border-top small">
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" id="prestasi-wajib-pulang" checked onchange="renderPrestasiUI()">
+                            <label class="form-check-label fw-semibold text-dark" for="prestasi-wajib-pulang">
+                                Wajib tercatat <strong>Pulang Tepat Waktu (Pulang Normal)</strong>
+                            </label>
+                        </div>
+                        <div class="text-muted">
+                            <i class="fas fa-info-circle text-primary me-1"></i> Kriteria: Datang tepat waktu (H) paling awal &amp; pulang normal (Top 3 tiap kelas).
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Strip Ringkasan Prestasi -->
+                <div class="row g-2 mb-3">
+                    <div class="col-6 col-md-4">
+                        <div class="stat-card bg-primary py-2">
+                            <h4 class="fw-bold m-0" id="prestasi-sum-kelas">0</h4>
+                            <small>Kelas Ditampilkan</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <div class="stat-card bg-success py-2">
+                            <h4 class="fw-bold m-0" id="prestasi-sum-penerima">0</h4>
+                            <small>Total Siswa Berprestasi (Top 3)</small>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="stat-card bg-dark py-2">
+                            <h4 class="fw-bold m-0 text-warning" id="prestasi-sum-terawal">-</h4>
+                            <small id="prestasi-sum-terawal-nama">Rekor Datang Terawal</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grid Kartu Top 3 per Kelas -->
+                <div class="row g-3" id="prestasi-kelas-grid">
+                    <div class="col-12 text-center text-muted py-4">Memuat data prestasi siswa...</div>
+                </div>
+            </div>
+			
             <!-- ================================================================= -->
             <!-- 5. VIEW PENGATURAN & AKUN (ADMIN ONLY)                            -->
             <!-- ================================================================= -->
@@ -3077,7 +3241,7 @@
                 document.body.classList.remove('kiosk-mode');
             }
 
-            const pages = ['dashboard', 'scan', 'siswa', 'rekap', 'rapor', 'statistik', 'grafik', 'pengaturan'];
+            const pages = ['dashboard', 'scan', 'siswa', 'rekap', 'rapor', 'statistik', 'grafik', 'prestasi', 'pengaturan'];
             pages.forEach(p => {
                 const nav = document.getElementById('nav-' + p);
                 const view = document.getElementById('view-' + p);
@@ -3096,6 +3260,7 @@
                 rapor: "Rapor Individu",
                 statistik: "Statistik Kelas",
                 grafik: "Grafik Statistik Kelas",
+                prestasi: "Prestasi Siswa Disiplin",
                 pengaturan: "Pengaturan & Akun"
             };
             document.getElementById('app-title').innerText = titles[page] || "Dashboard";
@@ -3107,6 +3272,7 @@
             if (page === 'rapor') initRaporPage();
             if (page === 'statistik') initStatistikPage();
             if (page === 'grafik') initGrafikPage();
+            if (page === 'prestasi') initPrestasiPage();
             if (page === 'pengaturan') loadPengaturanDanUsers();
         }
 
@@ -7237,6 +7403,432 @@
             setTimeout(() => { window.print(); }, 300);
         }       
 
+         // =========================================================================
+        // 4E. PRESTASI SISWA DISIPLIN (TOP 3 DATANG TERAWAL & PULANG TEPAT WAKTU)
+        // =========================================================================
+        let PRESTASI_STATE = {
+            rows: [],
+            periodeCode: '',
+            periodeLabel: '',
+            isSingleDate: false,
+            hasilPerKelas: []
+        };
+
+        function initPrestasiPage() {
+            const blnNow = String(new Date().getMonth() + 1).padStart(2, '0');
+            const selPeriode = document.getElementById('prestasi-filter-periode');
+            const tglEl = document.getElementById('prestasi-filter-tanggal');
+            if (selPeriode && !PRESTASI_STATE.periodeCode) {
+                selPeriode.value = blnNow;
+            }
+            if (tglEl && !PRESTASI_STATE.periodeCode) {
+                tglEl.value = '';
+            }
+            loadPrestasiData();
+        }
+
+        function onPrestasiPeriodeChange() {
+            const tglEl = document.getElementById('prestasi-filter-tanggal');
+            if (tglEl) tglEl.value = '';
+            loadPrestasiData();
+        }
+
+        function onPrestasiTanggalChange() {
+            const tgl = document.getElementById('prestasi-filter-tanggal').value;
+            if (tgl && tgl.length >= 7) {
+                document.getElementById('prestasi-filter-periode').value = tgl.substring(5, 7);
+            }
+            loadPrestasiData();
+        }
+
+        function resetPrestasiTanggal() {
+            const tglEl = document.getElementById('prestasi-filter-tanggal');
+            if (tglEl) tglEl.value = '';
+            loadPrestasiData();
+        }
+
+        function timeToSecondsPrestasi(timeStr) {
+            if (!timeStr) return null;
+            const s = String(timeStr).trim();
+            if (!s || s === '-') return null;
+            const m = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+            if (!m) return null;
+            const hh = parseInt(m[1], 10);
+            const mm = parseInt(m[2], 10);
+            const ss = parseInt(m[3] || '0', 10);
+            if (isNaN(hh) || isNaN(mm) || isNaN(ss)) return null;
+            return (hh * 3600) + (mm * 60) + ss;
+        }
+
+        function secondsToTimeStr(totalSec) {
+            if (totalSec === null || totalSec === undefined || isNaN(totalSec)) return '-';
+            const secRound = Math.max(0, Math.round(totalSec));
+            const hh = Math.floor(secRound / 3600);
+            const mm = Math.floor((secRound % 3600) / 60);
+            const ss = secRound % 60;
+            return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+        }
+
+        function populatePrestasiFilterDropdowns() {
+            const daftarKelas = getDaftarKelasTerurut();
+            const tingkatList = sortTingkatList([...new Set(daftarKelas.map(k => getTingkatKelas(k)))]);
+
+            const selTingkat = document.getElementById('prestasi-filter-tingkat');
+            if (selTingkat) {
+                const prevT = selTingkat.value;
+                selTingkat.innerHTML = '<option value="">Semua Tingkat</option>' +
+                    tingkatList.map(t => `<option value="${escapeHTML(t)}">Tingkat ${escapeHTML(t)}</option>`).join('');
+                if (prevT && tingkatList.includes(prevT)) selTingkat.value = prevT;
+            }
+
+            const selKelas = document.getElementById('prestasi-filter-kelas');
+            if (selKelas) {
+                const prevK = selKelas.value;
+                selKelas.innerHTML = '<option value="">Semua Kelas</option>' +
+                    daftarKelas.map(k => `<option value="${escapeHTML(k)}">${escapeHTML(formatLabelKelas(k))}</option>`).join('');
+                if (prevK && daftarKelas.includes(prevK)) selKelas.value = prevK;
+            }
+        }
+
+        function loadPrestasiData() {
+            const periodeVal = document.getElementById('prestasi-filter-periode').value;
+            const tglEl = document.getElementById('prestasi-filter-tanggal');
+            const tgl = tglEl ? tglEl.value : '';
+
+            let apiBulan = 'all';
+            if (tgl && tgl.length >= 7) {
+                apiBulan = tgl.substring(5, 7);
+            } else if (/^\d{2}$/.test(periodeVal)) {
+                apiBulan = periodeVal;
+            }
+
+            callBackend('getRekap_server', [apiBulan, ''], (res) => {
+                let rows = (res && res.absensi) ? res.absensi : [];
+                if (res && Array.isArray(res.siswa) && res.siswa.length > 0) {
+                    STATE.siswa = res.siswa;
+                }
+
+                if (tgl) {
+                    rows = rows.filter(r => String(r.tanggal || '').trim() === tgl);
+                    PRESTASI_STATE.periodeCode = 'tgl';
+                    PRESTASI_STATE.periodeLabel = `Tanggal ${formatTanggalIndo(tgl)}`;
+                    PRESTASI_STATE.isSingleDate = true;
+                } else if (periodeVal === 'sem1') {
+                    rows = rows.filter(r => {
+                        const m = parseInt(String(r.tanggal || '').substring(5, 7), 10);
+                        return m >= 7 && m <= 12;
+                    });
+                    PRESTASI_STATE.periodeCode = 'sem1';
+                    PRESTASI_STATE.periodeLabel = 'Semester 1 (Juli - Desember)';
+                    PRESTASI_STATE.isSingleDate = false;
+                } else if (periodeVal === 'sem2') {
+                    rows = rows.filter(r => {
+                        const m = parseInt(String(r.tanggal || '').substring(5, 7), 10);
+                        return m >= 1 && m <= 6;
+                    });
+                    PRESTASI_STATE.periodeCode = 'sem2';
+                    PRESTASI_STATE.periodeLabel = 'Semester 2 (Januari - Juni)';
+                    PRESTASI_STATE.isSingleDate = false;
+                } else if (periodeVal === 'all') {
+                    PRESTASI_STATE.periodeCode = 'all';
+                    PRESTASI_STATE.periodeLabel = '1 Tahun Penuh (Januari - Desember)';
+                    PRESTASI_STATE.isSingleDate = false;
+                } else {
+                    PRESTASI_STATE.periodeCode = periodeVal;
+                    PRESTASI_STATE.periodeLabel = `Bulan ${NAMA_BULAN_MAP[periodeVal] || periodeVal}`;
+                    PRESTASI_STATE.isSingleDate = false;
+                }
+
+                PRESTASI_STATE.rows = rows;
+                populatePrestasiFilterDropdowns();
+                renderPrestasiUI();
+            }, "Menghitung Prestasi Siswa...");
+        }
+
+        function hitungPrestasiPerKelas() {
+            const filterTingkat = document.getElementById('prestasi-filter-tingkat')
+                ? document.getElementById('prestasi-filter-tingkat').value
+                : '';
+            const filterKelas = document.getElementById('prestasi-filter-kelas')
+                ? document.getElementById('prestasi-filter-kelas').value
+                : '';
+            const wajibPulangNormal = document.getElementById('prestasi-wajib-pulang')
+                ? document.getElementById('prestasi-wajib-pulang').checked
+                : true;
+
+            const rows = PRESTASI_STATE.rows || [];
+
+            // Kumpulkan semua kelas terurut alami (SD/SMP/SMA)
+            const kelasSet = new Set(getDaftarKelasTerurut());
+            rows.forEach(r => {
+                const k = String(r.kelas || '').trim();
+                if (k) kelasSet.add(k);
+            });
+
+            let daftarKelas = [...kelasSet].sort((a, b) => {
+                const oa = getUrutanTingkat(getTingkatKelas(a));
+                const ob = getUrutanTingkat(getTingkatKelas(b));
+                if (oa !== ob) return oa - ob;
+                return a.localeCompare(b, 'id', { numeric: true, sensitivity: 'base' });
+            });
+
+            if (filterTingkat) {
+                daftarKelas = daftarKelas.filter(k => getTingkatKelas(k) === filterTingkat);
+            }
+            if (filterKelas) {
+                daftarKelas = daftarKelas.filter(k => k === filterKelas);
+            }
+
+            // Saring record yang memenuhi syarat: Status Hadir (H), punya jam masuk valid,
+            // dan (jika wajibPulangNormal aktif) status_pulang === 'Pulang Normal' + jam pulang valid
+            const qualifiedRows = rows.filter(r => {
+                const st = String(r.status || '').trim().toUpperCase();
+                if (st !== 'H') return false;
+                const secMasuk = timeToSecondsPrestasi(r.jam_masuk);
+                if (secMasuk === null) return false;
+
+                if (wajibPulangNormal) {
+                    const stPulang = String(r.status_pulang || '').trim().toLowerCase();
+                    const secPulang = timeToSecondsPrestasi(r.jam_pulang);
+                    if (stPulang !== 'pulang normal' || secPulang === null) return false;
+                }
+                return true;
+            });
+
+            return daftarKelas.map(kls => {
+                const rowsKelas = qualifiedRows.filter(r => String(r.kelas || '').trim() === kls);
+                const mapSiswa = {};
+
+                rowsKelas.forEach(r => {
+                    const key = String(r.nis || r.id_siswa || r.nama).trim().toUpperCase();
+                    const secMasuk = timeToSecondsPrestasi(r.jam_masuk);
+                    const secPulang = timeToSecondsPrestasi(r.jam_pulang);
+                    const isPulangNormal = String(r.status_pulang || '').trim().toLowerCase() === 'pulang normal';
+
+                    if (!mapSiswa[key]) {
+                        mapSiswa[key] = {
+                            nis: r.nis || '-',
+                            nama: r.nama || '-',
+                            jenis_kelamin: r.jenis_kelamin || '-',
+                            kelas: kls,
+                            jumlahHari: 0,
+                            jumlahPulangNormal: 0,
+                            totalSecMasuk: 0,
+                            minSecMasuk: Infinity,
+                            lastJamMasuk: r.jam_masuk || '-',
+                            lastJamPulang: r.jam_pulang || '-'
+                        };
+                    }
+
+                    const item = mapSiswa[key];
+                    item.jumlahHari += 1;
+                    if (isPulangNormal) item.jumlahPulangNormal += 1;
+                    item.totalSecMasuk += secMasuk;
+                    if (secMasuk < item.minSecMasuk) {
+                        item.minSecMasuk = secMasuk;
+                        item.lastJamMasuk = r.jam_masuk || secondsToTimeStr(secMasuk);
+                    }
+                    if (secPulang !== null) {
+                        item.lastJamPulang = r.jam_pulang || secondsToTimeStr(secPulang);
+                    }
+                });
+
+                const ranked = Object.values(mapSiswa)
+                    .map(item => {
+                        const avgSec = item.totalSecMasuk / item.jumlahHari;
+                        return {
+                            ...item,
+                            avgSecMasuk: avgSec,
+                            avgJamMasukStr: secondsToTimeStr(avgSec),
+                            minJamMasukStr: secondsToTimeStr(item.minSecMasuk)
+                        };
+                    })
+                    .sort((a, b) => {
+                        // 1. Jumlah hari disiplin terbanyak (untuk periode bulanan/semester/tahunan)
+                        if (b.jumlahHari !== a.jumlahHari) return b.jumlahHari - a.jumlahHari;
+                        // 2. Jika mode non-wajib pulang, prioritaskan yang punya Pulang Normal lebih banyak
+                        if (b.jumlahPulangNormal !== a.jumlahPulangNormal) return b.jumlahPulangNormal - a.jumlahPulangNormal;
+                        // 3. Rata-rata jam datang paling awal
+                        if (a.avgSecMasuk !== b.avgSecMasuk) return a.avgSecMasuk - b.avgSecMasuk;
+                        // 4. Rekor datang paling awal
+                        if (a.minSecMasuk !== b.minSecMasuk) return a.minSecMasuk - b.minSecMasuk;
+                        // 5. Nama A-Z
+                        return String(a.nama).localeCompare(String(b.nama), 'id', { sensitivity: 'base' });
+                    });
+
+                return {
+                    kelas: kls,
+                    labelKelas: formatLabelKelas(kls),
+                    totalKandidat: ranked.length,
+                    top3: ranked.slice(0, 3)
+                };
+            });
+        }
+
+        function renderPrestasiUI() {
+            const grid = document.getElementById('prestasi-kelas-grid');
+            const labelEl = document.getElementById('prestasi-label-periode');
+            const wajibPulang = document.getElementById('prestasi-wajib-pulang')
+                ? document.getElementById('prestasi-wajib-pulang').checked
+                : true;
+            if (!grid) return;
+
+            if (labelEl) {
+                labelEl.innerText = PRESTASI_STATE.periodeLabel || '';
+            }
+
+            const hasil = hitungPrestasiPerKelas();
+            PRESTASI_STATE.hasilPerKelas = hasil;
+
+            let totalPenerima = 0;
+            let bestGlobal = null;
+
+            hasil.forEach(k => {
+                totalPenerima += k.top3.length;
+                k.top3.forEach(s => {
+                    if (!bestGlobal || s.minSecMasuk < bestGlobal.minSecMasuk) {
+                        bestGlobal = s;
+                    }
+                });
+            });
+
+            document.getElementById('prestasi-sum-kelas').innerText = hasil.length;
+            document.getElementById('prestasi-sum-penerima').innerText = totalPenerima;
+            document.getElementById('prestasi-sum-terawal').innerText = bestGlobal ? bestGlobal.minJamMasukStr : '-';
+            document.getElementById('prestasi-sum-terawal-nama').innerText = bestGlobal
+                ? `Terawal: ${bestGlobal.nama} (${bestGlobal.kelas})`
+                : 'Rekor Datang Terawal';
+
+            if (hasil.length === 0) {
+                grid.innerHTML = '<div class="col-12 text-center text-muted py-4">Tidak ada kelas yang sesuai filter.</div>';
+                return;
+            }
+
+            const medalLabels = ['Juara 1', 'Juara 2', 'Juara 3'];
+            const isSingle = PRESTASI_STATE.isSingleDate;
+
+            grid.innerHTML = hasil.map(item => {
+                const bodyHTML = item.top3.length === 0
+                    ? `<div class="text-center text-muted small py-3 bg-light rounded border border-dashed">
+                           <i class="fas fa-hourglass-half me-1"></i>
+                           Belum ada siswa yang memenuhi syarat ${wajibPulang ? '(Hadir tepat waktu &amp; Pulang Normal)' : '(Hadir tepat waktu)'} pada periode ini.
+                       </div>`
+                    : item.top3.map((s, idx) => {
+                        const rankNo = idx + 1;
+                        const detailWaktu = isSingle
+                            ? `<span class="badge bg-success"><i class="fas fa-sign-in-alt me-1"></i>Masuk ${escapeHTML(s.lastJamMasuk)}</span>
+                               <span class="badge bg-primary"><i class="fas fa-sign-out-alt me-1"></i>Pulang ${escapeHTML(s.lastJamPulang)}</span>`
+                            : `<span class="badge bg-success"><i class="fas fa-clock me-1"></i>Rata-rata ${escapeHTML(s.avgJamMasukStr)}</span>
+                               <span class="badge bg-primary"><i class="fas fa-calendar-check me-1"></i>${s.jumlahHari} Hari Disiplin</span>
+                               <span class="badge bg-secondary">Terawal ${escapeHTML(s.minJamMasukStr)}</span>`;
+
+                        return `
+                            <div class="prestasi-rank-item rank-${rankNo}">
+                                <div class="prestasi-medal m-${rankNo}" title="${medalLabels[idx]}">
+                                    #${rankNo}
+                                </div>
+                                <div class="flex-grow-1 min-w-0">
+                                    <div class="d-flex justify-content-between align-items-center gap-2">
+                                        <div class="fw-bold text-dark text-truncate">${escapeHTML(s.nama)}</div>
+                                        <span class="badge bg-dark">${escapeHTML(s.nis)}</span>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-1 mt-1">
+                                        ${detailWaktu}
+                                    </div>
+                                </div>
+                            </div>`;
+                    }).join('');
+
+                return `
+                    <div class="col-12 col-lg-6">
+                        <div class="prestasi-kelas-card">
+                            <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                                <div class="fw-bold text-dark fs-6">
+                                    <i class="fas fa-award text-warning me-2"></i>${escapeHTML(item.labelKelas)}
+                                </div>
+                                <span class="badge ${item.top3.length > 0 ? 'bg-primary' : 'bg-secondary'} rounded-pill">
+                                    Top ${item.top3.length} / 3 Siswa
+                                </span>
+                            </div>
+                            ${bodyHTML}
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        function cetakPrestasiPDF() {
+            const hasil = PRESTASI_STATE.hasilPerKelas || [];
+            const adaPenerima = hasil.some(k => k.top3.length > 0);
+            if (!adaPenerima) {
+                return customAlert("Belum ada data siswa berprestasi pada filter ini untuk dicetak.");
+            }
+
+            const wajibPulang = document.getElementById('prestasi-wajib-pulang')
+                ? document.getElementById('prestasi-wajib-pulang').checked
+                : true;
+            const isSingle = PRESTASI_STATE.isSingleDate;
+            const todayIndo = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            const kriteriaText = wajibPulang
+                ? 'Datang Paling Awal (Hadir) & Pulang Tepat Waktu (Pulang Normal)'
+                : 'Datang Paling Awal (Hadir Tepat Waktu)';
+
+            let rowsHtml = '';
+            hasil.forEach(item => {
+                if (item.top3.length === 0) return;
+                rowsHtml += `
+                    <tr style="background:#e2e8f0; page-break-after:avoid; break-after:avoid;">
+                        <td colspan="7" style="text-align:left; font-weight:bold; padding:6px 8px; background:#e2e8f0; white-space:normal;">
+                            ${escapeHTML(item.labelKelas.toUpperCase())} &mdash; TOP ${item.top3.length} SISWA DISIPLIN
+                        </td>
+                    </tr>`;
+
+                item.top3.forEach((s, idx) => {
+                    const col5 = isSingle ? escapeHTML(s.lastJamMasuk) : escapeHTML(s.avgJamMasukStr);
+                    const col6 = isSingle ? escapeHTML(s.lastJamPulang) : `${s.jumlahHari} Hari`;
+                    const col7 = isSingle ? 'Pulang Normal' : `Terawal: ${escapeHTML(s.minJamMasukStr)}`;
+                    rowsHtml += `
+                        <tr>
+                            <td><strong>#${idx + 1}</strong></td>
+                            <td>${escapeHTML(s.nis)}</td>
+                            <td style="text-align:left; font-weight:bold;">${escapeHTML(s.nama)}</td>
+                            <td>${escapeHTML(s.jenis_kelamin)}</td>
+                            <td><strong>${col5}</strong></td>
+                            <td><strong>${col6}</strong></td>
+                            <td>${col7}</td>
+                        </tr>`;
+                });
+            });
+
+            const container = document.getElementById('print-container-global');
+            container.innerHTML = `
+                <div style="font-family: 'Times New Roman', serif; color:#000;">
+                    <div style="text-align:center; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 14px;">
+                        <h3 style="margin:0; font-weight:bold;">${escapeHTML((STATE.pengaturan.nama_sekolah || 'SEKOLAH').toUpperCase())}</h3>
+                        <h4 style="margin:4px 0 0 0;">DAFTAR PRESTASI KEDISIPLINAN SISWA (TOP 3 PER KELAS)</h4>
+                        <div style="font-size:12.5px; margin-top:4px;">Periode: ${escapeHTML(PRESTASI_STATE.periodeLabel)} | Kriteria: ${escapeHTML(kriteriaText)}</div>
+                    </div>
+                    <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;" border="1">
+                        <thead>
+                            <tr style="background:#eee;">
+                                <th style="padding:6px; width:8%;">Peringkat</th>
+                                <th style="padding:6px; width:14%;">NIS</th>
+                                <th style="padding:6px; text-align:left;">Nama Siswa</th>
+                                <th style="padding:6px; width:7%;">L/P</th>
+                                <th style="padding:6px; width:15%;">${isSingle ? 'Jam Masuk' : 'Rata-rata Masuk'}</th>
+                                <th style="padding:6px; width:14%;">${isSingle ? 'Jam Pulang' : 'Hari Disiplin'}</th>
+                                <th style="padding:6px; width:16%;">Keterangan</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                    <div style="width: 250px; float:right; text-align:center; margin-top: 28px; font-size: 13px;">
+                        ${todayIndo}<br>Kepala Sekolah / Wakasek Kesiswaan<br><br><br><br>
+                        <strong>${escapeHTML(STATE.user ? STATE.user.nama : '__________________')}</strong>
+                    </div>
+                </div>`;
+            setTimeout(() => { window.print(); }, 250);
+        }
+		
         // =========================================================================
         // 5. PENGATURAN & MANAJEMEN AKUN
         // =========================================================================
