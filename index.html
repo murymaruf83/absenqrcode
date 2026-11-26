@@ -918,7 +918,10 @@
             <div id="view-siswa" class="hidden">
                 <div class="card-custom">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                        <h5 class="fw-bold text-primary m-0"><i class="fas fa-users me-2"></i> Manajemen Siswa &amp; Kartu QR Code</h5>
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <h5 class="fw-bold text-primary m-0"><i class="fas fa-users me-2"></i> Manajemen Siswa &amp; Kartu QR Code</h5>
+                            <span id="badge-total-siswa-tab" class="badge bg-primary rounded-pill">0 Siswa</span>
+                        </div>
                         <div class="d-flex flex-wrap gap-2">
                             <button class="btn btn-sm btn-dark fw-bold" onclick="cetakKartuQRMassal()">
                                 <i class="fas fa-id-card me-1"></i> Cetak Kartu QR (Filter Aktif)
@@ -934,12 +937,12 @@
 
                     <div class="row g-2 mb-3">
                         <div class="col-12 col-md-4">
-                            <select id="siswa-filter-kelas" class="form-select border-primary" onchange="renderTableSiswa()">
+                            <select id="siswa-filter-kelas" class="form-select border-primary" onchange="STATE.siswaPage = 1; renderTableSiswa();">
                                 <option value="">Semua Kelas</option>
                             </select>
                         </div>
                         <div class="col-12 col-md-5">
-                            <input type="text" id="siswa-search" class="form-control border-primary" placeholder="Cari NIS atau Nama Siswa..." oninput="renderTableSiswa()">
+                            <input type="text" id="siswa-search" class="form-control border-primary" placeholder="Cari NIS atau Nama Siswa..." oninput="STATE.siswaPage = 1; renderTableSiswa();">
                         </div>
                     </div>
 
@@ -960,6 +963,15 @@
                                 <tr><td colspan="7" class="text-muted py-3">Memuat data siswa...</td></tr>
                             </tbody>
                         </table>
+                    </div>
+
+                    <div id="siswa-pagination-footer" class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 mt-3 pt-2 border-top">
+                        <div id="siswa-pagination-info" class="small text-muted fw-semibold">
+                            Menampilkan 0 siswa
+                        </div>
+                        <nav aria-label="Navigasi Halaman Data Siswa">
+                            <ul id="siswa-pagination-nav" class="pagination pagination-sm mb-0 flex-wrap justify-content-center"></ul>
+                        </nav>
                     </div>
                 </div>
             </div>
@@ -2099,6 +2111,7 @@
         };
 
         const BELUM_ABSEN_PER_PAGE = 10;
+        const SISWA_PER_PAGE = 20;
 
         let STATE = {
             user: null,
@@ -2118,7 +2131,8 @@
             availableCameras: [],
             importRawRows: [],
             importValidatedRows: [],
-            belumAbsenPage: 1
+            belumAbsenPage: 1,
+            siswaPage: 1
         };
 
         function showLoader(msg = "Memproses Data...") {
@@ -3799,15 +3813,33 @@
             });
             list.sort((a, b) => String(a.kelas).localeCompare(String(b.kelas)) || String(a.nama).localeCompare(String(b.nama)));
 
+            const totalItems = list.length;
+            const badgeEl = document.getElementById('badge-total-siswa-tab');
+            if (badgeEl) badgeEl.innerText = `${totalItems} Siswa`;
+
             const tb = document.getElementById('tbody-siswa');
-            if (list.length === 0) {
+            const infoEl = document.getElementById('siswa-pagination-info');
+            const pagEl = document.getElementById('siswa-pagination-nav');
+
+            if (totalItems === 0) {
                 tb.innerHTML = `<tr><td colspan="${isAdmin ? 7 : 6}" class="text-muted py-4">Tidak ada data siswa ditemukan.</td></tr>`;
+                if (infoEl) infoEl.innerText = 'Menampilkan 0 siswa';
+                if (pagEl) pagEl.innerHTML = '';
                 return;
             }
 
-            tb.innerHTML = list.map((s, idx) => `
+            const totalPages = Math.max(1, Math.ceil(totalItems / SISWA_PER_PAGE));
+            if (STATE.siswaPage > totalPages) STATE.siswaPage = totalPages;
+            if (STATE.siswaPage < 1) STATE.siswaPage = 1;
+
+            const currentPage = STATE.siswaPage;
+            const startIdx = (currentPage - 1) * SISWA_PER_PAGE;
+            const endIdx = Math.min(startIdx + SISWA_PER_PAGE, totalItems);
+            const pageItems = list.slice(startIdx, endIdx);
+
+            tb.innerHTML = pageItems.map((s, idx) => `
                 <tr>
-                    <td>${idx + 1}</td>
+                    <td>${startIdx + idx + 1}</td>
                     <td><span class="badge bg-primary px-2">${escapeHTML(s.nis)}</span></td>
                     <td class="text-start fw-bold">${escapeHTML(s.nama)}</td>
                     <td>${s.jenis_kelamin === 'L' ? 'Laki-laki (L)' : 'Perempuan (P)'}</td>
@@ -3823,6 +3855,71 @@
                         <button class="btn btn-sm btn-danger" onclick="hapusSiswa('${escapeHTML(s.id_siswa)}')" title="Hapus"><i class="fas fa-trash"></i></button>
                     </td>` : ''}
                 </tr>`).join('');
+
+            if (infoEl) {
+                infoEl.innerText = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} siswa (Halaman ${currentPage} dari ${totalPages})`;
+            }
+            renderSiswaPagination(currentPage, totalPages);
+        }
+
+        function renderSiswaPagination(currentPage, totalPages) {
+            const pagEl = document.getElementById('siswa-pagination-nav');
+            if (!pagEl) return;
+
+            if (totalPages <= 1) {
+                pagEl.innerHTML = '';
+                return;
+            }
+
+            const pages = [];
+            if (totalPages <= 7) {
+                for (let p = 1; p <= totalPages; p++) pages.push(p);
+            } else {
+                pages.push(1);
+                let start = Math.max(2, currentPage - 1);
+                let end = Math.min(totalPages - 1, currentPage + 1);
+
+                if (currentPage <= 3) {
+                    start = 2;
+                    end = 4;
+                } else if (currentPage >= totalPages - 2) {
+                    start = totalPages - 3;
+                    end = totalPages - 1;
+                }
+
+                if (start > 2) pages.push('...');
+                for (let p = start; p <= end; p++) pages.push(p);
+                if (end < totalPages - 1) pages.push('...');
+                pages.push(totalPages);
+            }
+
+            let html = `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <button type="button" class="page-link" onclick="goToSiswaPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>&laquo; Sebelumnya</button>
+                </li>`;
+
+            pages.forEach(p => {
+                if (p === '...') {
+                    html += '<li class="page-item disabled"><span class="page-link">&hellip;</span></li>';
+                } else {
+                    html += `
+                        <li class="page-item ${p === currentPage ? 'active' : ''}">
+                            <button type="button" class="page-link fw-semibold" onclick="goToSiswaPage(${p})">${p}</button>
+                        </li>`;
+                }
+            });
+
+            html += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <button type="button" class="page-link" onclick="goToSiswaPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Berikutnya &raquo;</button>
+                </li>`;
+
+            pagEl.innerHTML = html;
+        }
+
+        function goToSiswaPage(pageNum) {
+            STATE.siswaPage = pageNum;
+            renderTableSiswa();
         }
 
         function openModalSiswa() {
