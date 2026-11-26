@@ -407,6 +407,66 @@
                 padding: 10px 14px;
             }
         }
+		
+		/* Panel & Kartu Statistik Kehadiran Kelas (Dashboard) */
+        .panel-stat-kelas {
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #edf0f5;
+            border-left: 4px solid #f59e0b;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            padding: 18px;
+            margin-bottom: 18px;
+        }
+        .kelas-stat-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid #0d6efd;
+            border-radius: 12px;
+            padding: 14px 16px;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+            height: 100%;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .kelas-stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 14px rgba(13, 110, 253, 0.12);
+        }
+        .kelas-stat-badge-jml {
+            background: #f8fafc;
+            border: 1px solid #94a3b8;
+            color: #475569;
+            font-size: 0.76rem;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 8px;
+            white-space: nowrap;
+        }
+        .kelas-stat-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 4px;
+            text-align: center;
+            margin: 14px 0 12px 0;
+        }
+        .kelas-stat-num {
+            font-size: 1.25rem;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+        .kelas-stat-lbl {
+            font-size: 0.72rem;
+            color: #64748b;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+        .kelas-stat-progress {
+            height: 7px;
+            border-radius: 999px;
+            background-color: #e2e8f0;
+            overflow: hidden;
+        }
+		
     </style>
 </head>
 <body>
@@ -585,7 +645,27 @@
                     </div>
                 </div>
                 
-<!-- PANEL PANTAUAN IZIN KELUAR SEMENTARA (OPSI 1) -->
+				<!-- PANEL STATISTIK KEHADIRAN PER KELAS (BERDASARKAN TANGGAL) -->
+                <div class="panel-stat-kelas" id="card-stat-kelas-dashboard">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <h6 class="m-0 fw-bold text-dark">
+                                <i class="fas fa-chart-pie text-success me-2"></i>
+                                Statistik Kehadiran Kelas (Berdasarkan Tanggal)
+                            </h6>
+                            <span id="dash-stat-kelas-tgl" class="badge bg-light text-primary border border-primary"></span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-danger fw-bold px-3" onclick="cetakLaporanHarianPDF()">
+                            <i class="fas fa-print me-1"></i> Cetak PDF Laporan Harian
+                        </button>
+                    </div>
+
+                    <div class="row g-3" id="dash-stat-kelas-grid">
+                        <div class="col-12 text-center text-muted py-3 small">Memuat statistik kelas...</div>
+                    </div>
+                </div>
+				
+            <!-- PANEL PANTAUAN IZIN KELUAR SEMENTARA (OPSI 1) -->
                 <div class="card-custom border-top border-warning border-3" id="card-izin-keluar-dashboard">
                     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
                         <div class="d-flex align-items-center flex-wrap gap-2">
@@ -2750,7 +2830,109 @@
             renderAktivitasTable();
             renderBelumAbsenTable();
             renderIzinKeluarDashboard();
+            renderStatistikKelasDashboard();
         }
+		
+		function renderStatistikKelasDashboard() {
+            const grid = document.getElementById('dash-stat-kelas-grid');
+            const labelTgl = document.getElementById('dash-stat-kelas-tgl');
+            if (!grid) return;
+
+            const filterKls = document.getElementById('dash-filter-kelas').value;
+            const tgl = document.getElementById('dash-filter-tanggal').value;
+            if (labelTgl) labelTgl.innerText = formatTanggalIndo(tgl) || tgl;
+
+            // Kelompokkan siswa berdasarkan kelas (urut alami: X-1, X-2, ..., X-10)
+            const kelasSet = new Set(
+                (STATE.siswa || [])
+                    .map(s => String(s.kelas || '').trim())
+                    .filter(Boolean)
+            );
+            let daftarKelas = [...kelasSet].sort((a, b) =>
+                a.localeCompare(b, 'id', { numeric: true, sensitivity: 'base' })
+            );
+
+            if (filterKls) {
+                daftarKelas = daftarKelas.filter(k => k === filterKls);
+            }
+
+            if (daftarKelas.length === 0) {
+                grid.innerHTML = '<div class="col-12 text-center text-muted py-3 small">Belum ada data kelas yang terdaftar.</div>';
+                return;
+            }
+
+            grid.innerHTML = daftarKelas.map(kls => {
+                const siswaKelas = (STATE.siswa || []).filter(s => String(s.kelas || '').trim() === kls);
+                const totalSiswa = siswaKelas.length;
+
+                const absenKelas = (STATE.absensiHariIni || []).filter(a => String(a.kelas || '').trim() === kls);
+                let h = 0, t = 0, i = 0, s = 0, a = 0;
+                absenKelas.forEach(r => {
+                    const st = String(r.status || '').trim().toUpperCase();
+                    if (st === 'H') h++;
+                    else if (st === 'T') t++;
+                    else if (st === 'I') i++;
+                    else if (st === 'S') s++;
+                    else if (st === 'A') a++;
+                });
+
+                const hadirEfektif = h + t;
+                const rasio = totalSiswa > 0
+                    ? Math.min(100, Math.round((hadirEfektif / totalSiswa) * 100))
+                    : 0;
+
+                const badgeClass = rasio >= 85
+                    ? 'bg-success'
+                    : (rasio >= 70 ? 'bg-warning text-dark' : 'bg-danger');
+                const barClass = rasio >= 85
+                    ? 'bg-success'
+                    : (rasio >= 70 ? 'bg-warning' : 'bg-danger');
+
+                return `
+                    <div class="col-12 col-md-6">
+                        <div class="kelas-stat-card">
+                            <div class="d-flex justify-content-between align-items-center gap-2">
+                                <div class="fw-bold text-dark fs-6">
+                                    <i class="fas fa-chalkboard-user text-primary me-2"></i>Kelas ${escapeHTML(kls)}
+                                </div>
+                                <span class="kelas-stat-badge-jml">Jumlah: ${totalSiswa} Siswa</span>
+                            </div>
+
+                            <div class="kelas-stat-grid">
+                                <div>
+                                    <div class="kelas-stat-num text-success">${h}</div>
+                                    <div class="kelas-stat-lbl">Hadir</div>
+                                </div>
+                                <div>
+                                    <div class="kelas-stat-num text-orange">${t}</div>
+                                    <div class="kelas-stat-lbl">Telat</div>
+                                </div>
+                                <div>
+                                    <div class="kelas-stat-num text-primary">${i}</div>
+                                    <div class="kelas-stat-lbl">Ijin</div>
+                                </div>
+                                <div>
+                                    <div class="kelas-stat-num text-purple">${s}</div>
+                                    <div class="kelas-stat-lbl">Sakit</div>
+                                </div>
+                                <div>
+                                    <div class="kelas-stat-num text-danger">${a}</div>
+                                    <div class="kelas-stat-lbl">Alpa</div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center small mb-1">
+                                <span class="text-muted fw-semibold">Rasio Kehadiran:</span>
+                                <span class="badge ${badgeClass} px-2">${rasio}%</span>
+                            </div>
+                            <div class="kelas-stat-progress">
+                                <div class="progress-bar ${barClass}" role="progressbar" style="width: ${rasio}%; height: 100%;"></div>
+                            </div>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+		
 
         function renderDashPaginationNav(pagElId, currentPage, totalPages, fnName) {
             const pagEl = document.getElementById(pagElId);
