@@ -1042,10 +1042,26 @@
                         </div>
                     </div>
 
-                    <!-- TAB 2: REKAP JUMLAH H.T.I.S.A PER SISWA -->
+                    <!-- TAB 2: REKAP JUMLAH H.T.I.S.A PER SISWA (PAGINASI 20 SISWA / HALAMAN) -->
                     <div id="panel-rekap-siswa" class="hidden">
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-2">
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <span class="small fw-bold text-dark" id="rekap-siswa-title">
+                                    Rekap Jumlah H.T.I.S.A per Siswa
+                                </span>
+                                <span id="rekap-siswa-count-badge" class="badge bg-primary rounded-pill">0 Siswa</span>
+                                <span id="rekap-kelas-count-badge" class="badge bg-dark rounded-pill">0 Kelas</span>
+                            </div>
+                            <div class="input-group input-group-sm" style="max-width: 280px;">
+                                <span class="input-group-text bg-white border-primary text-primary">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" id="rekap-search-siswa" class="form-control border-primary" placeholder="Cari NIS, Nama, atau Kelas..." oninput="REKAP_STATE.siswaPage = 1; renderRekapSiswaTable();">
+                            </div>
+                        </div>
+
                         <div class="table-responsive">
-                            <table class="table table-bordered table-striped table-sm align-middle text-center mb-0">
+                            <table class="table table-bordered table-striped table-hover table-sm align-middle text-center mb-0">
                                 <thead class="table-dark">
                                     <tr>
                                         <th width="5%">No</th>
@@ -1068,6 +1084,15 @@
                                 </tbody>
                                 <tfoot id="tfoot-rekap-siswa" class="table-secondary fw-bold"></tfoot>
                             </table>
+                        </div>
+
+                        <div id="rekap-siswa-footer" class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 mt-3 pt-2 border-top">
+                            <div id="rekap-siswa-info" class="small text-muted fw-semibold">
+                                Menampilkan 0 siswa
+                            </div>
+                            <nav aria-label="Navigasi Halaman Rekap Siswa">
+                                <ul id="rekap-siswa-pagination" class="pagination pagination-sm mb-0 flex-wrap justify-content-center"></ul>
+                            </nav>
                         </div>
                     </div>
 
@@ -4130,6 +4155,8 @@
             '09': 'September', '10': 'Oktober', '11': 'November', '12': 'Desember'
         };
 
+        const REKAP_SISWA_PER_PAGE = 20;
+
         let REKAP_STATE = {
             activeTab: 'waktu',
             groupMode: 'hari',
@@ -4137,6 +4164,7 @@
             periodeLabel: '',
             summaryWaktu: [],
             summarySiswa: [],
+            siswaPage: 1,
             totals: { h: 0, t: 0, i: 0, s: 0, a: 0, total: 0, persen: 0 }
         };
 
@@ -4272,7 +4300,8 @@
                 if (btnHari) btnHari.classList.toggle('active', REKAP_STATE.groupMode === 'hari');
                 if (btnBulan) btnBulan.classList.toggle('active', REKAP_STATE.groupMode === 'bulan');
 
-                buildRekapWaktuSummary();
+                REKAP_STATE.siswaPage = 1;
+				buildRekapWaktuSummary();
                 buildRekapSiswaSummary(kls);
 
                 renderRekapWaktuTable();
@@ -4421,18 +4450,54 @@
         function renderRekapSiswaTable() {
             const tb = document.getElementById('tbody-rekap-siswa');
             const tf = document.getElementById('tfoot-rekap-siswa');
-            const list = REKAP_STATE.summarySiswa || [];
-            const tot = REKAP_STATE.totals;
+            const infoEl = document.getElementById('rekap-siswa-info');
+            const pagEl = document.getElementById('rekap-siswa-pagination');
+            const titleEl = document.getElementById('rekap-siswa-title');
+            const badgeSiswa = document.getElementById('rekap-siswa-count-badge');
+            const badgeKelas = document.getElementById('rekap-kelas-count-badge');
+            const searchEl = document.getElementById('rekap-search-siswa');
+            const keyword = searchEl ? searchEl.value.trim().toLowerCase() : '';
 
-            if (list.length === 0) {
-                tb.innerHTML = '<tr><td colspan="13" class="text-muted py-4">Tidak ada data siswa pada kelas yang dipilih.</td></tr>';
+            const allList = REKAP_STATE.summarySiswa || [];
+            const kelasUnikCount = new Set(allList.map(r => String(r.kelas || '').trim()).filter(Boolean)).size;
+
+            if (titleEl) titleEl.innerText = `Rekap Jumlah H.T.I.S.A per Siswa — ${REKAP_STATE.periodeLabel || ''}`;
+            if (badgeSiswa) badgeSiswa.innerText = `${allList.length} Siswa`;
+            if (badgeKelas) badgeKelas.innerText = `${kelasUnikCount} Kelas`;
+
+            const filteredList = keyword
+                ? allList.filter(r =>
+                    String(r.nis || '').toLowerCase().includes(keyword) ||
+                    String(r.nama || '').toLowerCase().includes(keyword) ||
+                    String(r.kelas || '').toLowerCase().includes(keyword)
+                )
+                : allList;
+
+            const totalItems = filteredList.length;
+            const totalPages = Math.max(1, Math.ceil(totalItems / REKAP_SISWA_PER_PAGE));
+
+            if (REKAP_STATE.siswaPage > totalPages) REKAP_STATE.siswaPage = totalPages;
+            if (REKAP_STATE.siswaPage < 1) REKAP_STATE.siswaPage = 1;
+
+            const currentPage = REKAP_STATE.siswaPage;
+            const startIdx = (currentPage - 1) * REKAP_SISWA_PER_PAGE;
+            const endIdx = Math.min(startIdx + REKAP_SISWA_PER_PAGE, totalItems);
+            const pageItems = filteredList.slice(startIdx, endIdx);
+
+            if (totalItems === 0) {
+                const emptyText = allList.length === 0
+                    ? 'Tidak ada data siswa pada kelas yang dipilih.'
+                    : `Tidak ditemukan siswa dengan kata kunci "${escapeHTML(keyword)}".`;
+                tb.innerHTML = `<tr><td colspan="13" class="text-muted py-4">${emptyText}</td></tr>`;
                 tf.innerHTML = '';
+                if (infoEl) infoEl.innerText = 'Menampilkan 0 siswa';
+                if (pagEl) pagEl.innerHTML = '';
                 return;
             }
 
-            tb.innerHTML = list.map((r, idx) => `
+            tb.innerHTML = pageItems.map((r, idx) => `
                 <tr>
-                    <td>${idx + 1}</td>
+                    <td>${startIdx + idx + 1}</td>
                     <td><span class="badge bg-secondary">${escapeHTML(r.nis)}</span></td>
                     <td class="text-start fw-bold">${escapeHTML(r.nama)}</td>
                     <td>${escapeHTML(r.jenis_kelamin)}</td>
@@ -4447,18 +4512,95 @@
                     <td class="text-start small">${escapeHTML(r.keterangan)}</td>
                 </tr>`).join('');
 
+            // Hitung total baris footer sesuai seluruh siswa pada hasil filter aktif
+            const sum = filteredList.reduce((acc, r) => {
+                acc.h += r.h; acc.t += r.t; acc.i += r.i; acc.s += r.s; acc.a += r.a;
+                return acc;
+            }, { h: 0, t: 0, i: 0, s: 0, a: 0 });
+            const sumTotal = sum.h + sum.t + sum.i + sum.s + sum.a;
+            const sumPersen = sumTotal > 0 ? Number((((sum.h + sum.t) / sumTotal) * 100).toFixed(1)) : 0;
+            const sumKet = sumTotal > 0
+                ? `H: ${sum.h} | T: ${sum.t} | I: ${sum.i} | S: ${sum.s} | A: ${sum.a} (Hadir ${sumPersen}%)`
+                : 'Belum ada data presensi';
+
             tf.innerHTML = `
                 <tr>
-                    <td colspan="5">TOTAL KESELURUHAN (${list.length} Siswa)</td>
-                    <td class="text-success">${tot.h}</td>
-                    <td class="text-orange">${tot.t}</td>
-                    <td class="text-primary">${tot.i}</td>
-                    <td class="text-purple">${tot.s}</td>
-                    <td class="text-danger">${tot.a}</td>
-                    <td>${tot.total}</td>
-                    <td>${tot.persen}%</td>
-                    <td class="text-start small">${escapeHTML(tot.keterangan)}</td>
+                    <td colspan="5">${keyword ? 'TOTAL HASIL CARI' : 'TOTAL KESELURUHAN'} (${totalItems} Siswa)</td>
+                    <td class="text-success">${sum.h}</td>
+                    <td class="text-orange">${sum.t}</td>
+                    <td class="text-primary">${sum.i}</td>
+                    <td class="text-purple">${sum.s}</td>
+                    <td class="text-danger">${sum.a}</td>
+                    <td>${sumTotal}</td>
+                    <td>${sumPersen}%</td>
+                    <td class="text-start small">${escapeHTML(sumKet)}</td>
                 </tr>`;
+
+            if (infoEl) {
+                infoEl.innerText = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} siswa (Halaman ${currentPage} dari ${totalPages})`;
+            }
+
+            renderRekapSiswaPagination(currentPage, totalPages);
+        }
+
+        function renderRekapSiswaPagination(currentPage, totalPages) {
+            const pagEl = document.getElementById('rekap-siswa-pagination');
+            if (!pagEl) return;
+
+            if (totalPages <= 1) {
+                pagEl.innerHTML = '';
+                return;
+            }
+
+            const pages = [];
+            if (totalPages <= 7) {
+                for (let p = 1; p <= totalPages; p++) pages.push(p);
+            } else {
+                pages.push(1);
+                let start = Math.max(2, currentPage - 1);
+                let end = Math.min(totalPages - 1, currentPage + 1);
+
+                if (currentPage <= 3) {
+                    start = 2;
+                    end = 4;
+                } else if (currentPage >= totalPages - 2) {
+                    start = totalPages - 3;
+                    end = totalPages - 1;
+                }
+
+                if (start > 2) pages.push('...');
+                for (let p = start; p <= end; p++) pages.push(p);
+                if (end < totalPages - 1) pages.push('...');
+                pages.push(totalPages);
+            }
+
+            let html = `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <button type="button" class="page-link" onclick="goToRekapSiswaPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>&laquo; Sebelumnya</button>
+                </li>`;
+
+            pages.forEach(p => {
+                if (p === '...') {
+                    html += '<li class="page-item disabled"><span class="page-link">&hellip;</span></li>';
+                } else {
+                    html += `
+                        <li class="page-item ${p === currentPage ? 'active' : ''}">
+                            <button type="button" class="page-link fw-semibold" onclick="goToRekapSiswaPage(${p})">${p}</button>
+                        </li>`;
+                }
+            });
+
+            html += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <button type="button" class="page-link" onclick="goToRekapSiswaPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Berikutnya &raquo;</button>
+                </li>`;
+
+            pagEl.innerHTML = html;
+        }
+
+        function goToRekapSiswaPage(pageNum) {
+            REKAP_STATE.siswaPage = pageNum;
+            renderRekapSiswaTable();
         }
 
         function renderTableRekap() {
