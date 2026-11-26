@@ -1171,13 +1171,10 @@
                                         <th class="text-start">Keterangan Jumlah H.T.I.S.A</th>
                                     </tr>
                                 </thead>
-                                <tbody id="tbody-rekap-waktu">
+                           <tbody id="tbody-rekap-waktu">
                                     <tr><td colspan="10" class="text-muted py-4">Pilih filter lalu klik <strong>Tampilkan</strong>.</td></tr>
                                 </tbody>
                                 <tfoot id="tfoot-rekap-waktu" class="table-secondary fw-bold"></tfoot>
-                            </table>
-                        </div>
-						<tfoot id="tfoot-rekap-waktu" class="table-secondary fw-bold"></tfoot>
                             </table>
                         </div>
 
@@ -1189,7 +1186,7 @@
                                 <ul id="rekap-waktu-pagination" class="pagination pagination-sm mb-0 flex-wrap justify-content-center"></ul>
                             </nav>
                         </div>
-                     </div> <!-- Penutup #panel-rekap-waktu harus di bawah footer ini -->
+                    </div> <!-- Penutup #panel-rekap-waktu harus di bawah footer ini -->
                     </div>
 
                     <!-- TAB 2: REKAP JUMLAH H.T.I.S.A PER SISWA (PAGINASI 20 SISWA / HALAMAN) -->
@@ -1246,32 +1243,7 @@
                         </div>
                     </div>
 
-                    <!-- TAB 3: DETAIL LOG SCAN HARIAN (TABEL ASLI) -->
-                    <div id="panel-rekap-detail" class="hidden">
-                        <div class="table-responsive">
-                            <table id="tabel-rekap-qr" class="table table-bordered table-striped table-sm align-middle text-center mb-0">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th>No</th>
-                                        <th>Tanggal</th>
-                                        <th>NIS</th>
-                                        <th class="text-start">Nama Siswa</th>
-                                        <th>L/P</th>
-                                        <th>Kelas</th>
-                                        <th>Jam Masuk</th>
-                                        <th>Jam Pulang</th>
-                                        <th>Status</th>
-                                        <th>Status Pulang</th>
-                                        <th class="text-start">Keterangan / Alasan Ijin</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tbody-rekap">
-                                    <tr><td colspan="11" class="text-muted py-4">Pilih filter lalu klik <strong>Tampilkan</strong>.</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+                    
 				<!-- TAB 3: DETAIL LOG SCAN HARIAN (PAGINASI 20 BARIS / HALAMAN) -->
                     <div id="panel-rekap-detail" class="hidden">
                         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-2">
@@ -2853,7 +2825,11 @@
             const endIdx = Math.min(startIdx + TIDAK_HADIR_PER_PAGE, totalItems);
             const pageItems = tidakHadir.slice(startIdx, endIdx);
 
-            tbTH.innerHTML = pageItems.map((r, idx) => `
+            tbTH.innerHTML = pageItems.map((r, idx) => {
+                const isIjinPulang = r.status_pulang === 'Ijin Pulang Awal' ||
+                    String(r.keterangan || '').toLowerCase().includes('ijin pulang');
+                const safeIdArg = JSON.stringify(String(r.id_absen || '')).replace(/"/g, '&quot;');
+                return `
                 <tr>
                     <td>${startIdx + idx + 1}</td>
                     <td><span class="badge bg-secondary">${escapeHTML(r.nis)}</span></td>
@@ -2864,7 +2840,13 @@
                     <td>${escapeHTML(r.jam_masuk || '-')}</td>
                     <td>${escapeHTML(r.jam_pulang || '-')}</td>
                     <td class="text-start small">${escapeHTML(r.keterangan || '-')}</td>
-                </tr>`).join('');
+                    <td>
+                        ${isIjinPulang
+                            ? `<button type="button" class="btn btn-sm btn-outline-danger fw-bold text-nowrap py-0 px-2" onclick="cetakBlankoIjinPulangById(${safeIdArg})" title="Cetak Blanko Izin Pulang"><i class="fas fa-print me-1"></i> Cetak</button>`
+                            : '<span class="text-muted small">-</span>'}
+                    </td>
+                </tr>`;
+            }).join('');
 
             if (infoEl) {
                 infoEl.innerText = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} siswa (Halaman ${currentPage} dari ${totalPages})`;
@@ -3705,21 +3687,19 @@
                     STATE.isProcessingScan = false;
 
                     if (res && res.success) {
-                    playBeep('success');
-                    LAST_IJIN_PULANG_REC = res.record || null;
-                    renderDisplayPanel({
-                        stateClass: 'state-ijin',
-                        badgeClass: 'bg-primary',
-                        badgeText: 'IJIN PULANG AWAL (I)',
-                        bannerClass: 'alert-primary',
-                        message: `Status otomatis berubah menjadi IJIN. Alasan: ${alasan}`,
-                        jamScan: res.jamScan || getCurrentTimeStr(),
-                        siswa: res.siswa,
-                        record: res.record,
-                        showBlankoBtn: true
-                    });
-                    refreshRecentScanSilent();
-                } else {
+                        playBeep('warning');
+                        renderDisplayPanel({
+                            stateClass: 'state-warning',
+                            badgeClass: 'bg-warning text-dark',
+                            badgeText: 'IZIN KELUAR SEMENTARA',
+                            bannerClass: 'alert-warning',
+                            message: `Keluar sementara dicatat (${alasan}). Scan ulang QR saat siswa kembali ke sekolah.`,
+                            jamScan: res.jamScan || getCurrentTimeStr(),
+                            siswa: res.siswa,
+                            record: res.record
+                        });
+                        refreshRecentScanSilent();
+                    } else {
                         customAlert(res && res.message ? res.message : "Gagal mencatat izin keluar sementara.");
                     }
                     const usbInput = document.getElementById('input-usb-qr');
@@ -3736,6 +3716,7 @@
 
                 if (res && res.success) {
                     playBeep('success');
+                    LAST_IJIN_PULANG_REC = res.record || null;
                     renderDisplayPanel({
                         stateClass: 'state-ijin',
                         badgeClass: 'bg-primary',
@@ -3744,7 +3725,8 @@
                         message: `Status otomatis berubah menjadi IJIN. Alasan: ${alasan}`,
                         jamScan: res.jamScan || getCurrentTimeStr(),
                         siswa: res.siswa,
-                        record: res.record
+                        record: res.record,
+                        showBlankoBtn: true
                     });
                     refreshRecentScanSilent();
                 } else {
@@ -3754,7 +3736,7 @@
                 if (usbInput) usbInput.focus();
             }, "Menyimpan Status Ijin...");
         }
-
+		
         function hitungDurasiIzinText(jamKeluar, jamKembali) {
             if (!jamKeluar || !jamKembali) return '';
             const selisih = Math.max(0, timeToMinutes(jamKembali) - timeToMinutes(jamKeluar));
@@ -3969,7 +3951,7 @@
                 }
             }
         }
-		}
+		
 
         function refreshRecentScanSilent() {
             callBackend('getInitialData_server', [getTodayStr()], (res) => {
