@@ -593,6 +593,7 @@
                     </div>
                 </div>				
                 <!-- Tabel Siswa Tidak Hadir / Ijin -->
+                <!-- Tabel Siswa Tidak Hadir / Ijin (Paginasi 5 Baris / Halaman) -->
                 <div class="card-custom">
                     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
                         <h6 class="m-0 fw-bold text-dark">
@@ -600,8 +601,8 @@
                             Daftar Siswa Ijin / Sakit / Alpa <span class="text-primary" id="dash-label-tanggal"></span>
                         </h6>
                         <div class="d-flex flex-wrap gap-2">
-                            <input type="date" id="dash-filter-tanggal" class="form-control form-control-sm border-primary" style="width: auto;" onchange="STATE.belumAbsenPage = 1; loadDashboardData();">
-                            <select id="dash-filter-kelas" class="form-select form-select-sm border-primary" style="width: auto;" onchange="STATE.belumAbsenPage = 1; renderDashboardUI();">
+                            <input type="date" id="dash-filter-tanggal" class="form-control form-control-sm border-primary" style="width: auto;" onchange="STATE.belumAbsenPage = 1; STATE.tidakHadirPage = 1; STATE.aktivitasPage = 1; loadDashboardData();">
+                            <select id="dash-filter-kelas" class="form-select form-select-sm border-primary" style="width: auto;" onchange="STATE.belumAbsenPage = 1; STATE.tidakHadirPage = 1; STATE.aktivitasPage = 1; renderDashboardUI();">
                                 <option value="">Semua Kelas</option>
                             </select>
                             <button class="btn btn-sm btn-outline-primary fw-bold" onclick="openModalAbsenManual()">
@@ -633,8 +634,16 @@
                             </tbody>
                         </table>
                     </div>
-                </div>
 
+                    <div id="dash-tidak-hadir-footer" class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 mt-3 pt-2 border-top">
+                        <div id="dash-tidak-hadir-info" class="small text-muted fw-semibold">
+                            Menampilkan 0 siswa
+                        </div>
+                        <nav aria-label="Navigasi Halaman Ijin Sakit Alpa">
+                            <ul id="dash-tidak-hadir-pagination" class="pagination pagination-sm mb-0 flex-wrap justify-content-center"></ul>
+                        </nav>
+                    </div>
+                </div>
                 <!-- Tabel Daftar Siswa Belum Absen (Paginasi 10 Baris / Halaman) -->
                 <div class="card-custom border-top border-danger border-3">
                     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
@@ -683,6 +692,7 @@
                 </div>
 
                 <!-- Tabel Aktivitas Scan Hari Ini -->
+                <!-- Tabel Aktivitas Scan Hari Ini (Paginasi 20 Baris / Halaman) -->
                 <div class="card-custom border-top border-primary border-3">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="m-0 fw-bold text-primary">
@@ -716,6 +726,15 @@
                                 <tr><td colspan="9" class="text-muted py-3">Belum ada aktivitas scan hari ini.</td></tr>
                             </tbody>
                         </table>
+                    </div>
+
+                    <div id="dash-aktivitas-footer" class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 mt-3 pt-2 border-top">
+                        <div id="dash-aktivitas-info" class="small text-muted fw-semibold">
+                            Menampilkan 0 aktivitas
+                        </div>
+                        <nav aria-label="Navigasi Halaman Aktivitas Scan">
+                            <ul id="dash-aktivitas-pagination" class="pagination pagination-sm mb-0 flex-wrap justify-content-center"></ul>
+                        </nav>
                     </div>
                 </div>
             </div>
@@ -2112,6 +2131,8 @@
 
         const BELUM_ABSEN_PER_PAGE = 10;
         const SISWA_PER_PAGE = 20;
+        const TIDAK_HADIR_PER_PAGE = 5;
+        const AKTIVITAS_PER_PAGE = 20;
 
         let STATE = {
             user: null,
@@ -2132,7 +2153,9 @@
             importRawRows: [],
             importValidatedRows: [],
             belumAbsenPage: 1,
-            siswaPage: 1
+            siswaPage: 1,
+            tidakHadirPage: 1,
+            aktivitasPage: 1
         };
 
         function showLoader(msg = "Memproses Data...") {
@@ -2696,45 +2719,168 @@
             document.getElementById('dash-s').innerText = s;
             document.getElementById('dash-a').innerText = a;
 
-            const tidakHadir = absenFiltered.filter(r => ['I', 'S', 'A'].includes(String(r.status).toUpperCase()));
-            const tbTH = document.getElementById('tbody-dash-tidak-hadir');
-            if (tidakHadir.length === 0) {
-                tbTH.innerHTML = '<tr><td colspan="9" class="text-muted py-3">Tidak ada siswa berstatus Ijin, Sakit, atau Alpa pada tanggal ini.</td></tr>';
-            } else {
-                tbTH.innerHTML = tidakHadir.map((r, idx) => `
-                    <tr>
-                        <td>${idx + 1}</td>
-                        <td><span class="badge bg-secondary">${escapeHTML(r.nis)}</span></td>
-                        <td class="text-start fw-bold">${escapeHTML(r.nama)}</td>
-                        <td>${escapeHTML(r.jenis_kelamin)}</td>
-                        <td><span class="badge bg-dark">${escapeHTML(r.kelas)}</span></td>
-                        <td>${getStatusBadgeHTML(r.status)}</td>
-                        <td>${escapeHTML(r.jam_masuk || '-')}</td>
-                        <td>${escapeHTML(r.jam_pulang || '-')}</td>
-                        <td class="text-start small">${escapeHTML(r.keterangan || '-')}</td>
-                    </tr>`).join('');
-            }
-
-            const tbAkt = document.getElementById('tbody-dash-aktivitas');
-            if (absenFiltered.length === 0) {
-                tbAkt.innerHTML = '<tr><td colspan="9" class="text-muted py-3">Belum ada aktivitas scan gerbang pada tanggal ini.</td></tr>';
-            } else {
-                tbAkt.innerHTML = absenFiltered.map((r, idx) => `
-                    <tr>
-                        <td>${idx + 1}</td>
-                        <td><span class="badge bg-secondary">${escapeHTML(r.nis)}</span></td>
-                        <td class="text-start fw-bold">${escapeHTML(r.nama)}</td>
-                        <td>${escapeHTML(r.jenis_kelamin)}</td>
-                        <td><span class="badge bg-dark">${escapeHTML(r.kelas)}</span></td>
-                        <td class="fw-bold text-success">${escapeHTML(r.jam_masuk || '-')}</td>
-                        <td class="fw-bold text-primary">${escapeHTML(r.jam_pulang || '-')}</td>
-                        <td>${getStatusBadgeHTML(r.status)}</td>
-                        <td><span class="badge ${r.status_pulang === 'Pulang Normal' ? 'bg-success' : (r.status_pulang === 'Ijin Pulang Awal' ? 'bg-primary' : 'bg-secondary')}">${escapeHTML(r.status_pulang || '-')}</span></td>
-                    </tr>`).join('');
-            }
-
+            renderTidakHadirTable();
+            renderAktivitasTable();
             renderBelumAbsenTable();
             renderIzinKeluarDashboard();
+        }
+
+        function renderDashPaginationNav(pagElId, currentPage, totalPages, fnName) {
+            const pagEl = document.getElementById(pagElId);
+            if (!pagEl) return;
+
+            if (totalPages <= 1) {
+                pagEl.innerHTML = '';
+                return;
+            }
+
+            const pages = [];
+            if (totalPages <= 7) {
+                for (let p = 1; p <= totalPages; p++) pages.push(p);
+            } else {
+                pages.push(1);
+                let start = Math.max(2, currentPage - 1);
+                let end = Math.min(totalPages - 1, currentPage + 1);
+
+                if (currentPage <= 3) {
+                    start = 2;
+                    end = 4;
+                } else if (currentPage >= totalPages - 2) {
+                    start = totalPages - 3;
+                    end = totalPages - 1;
+                }
+
+                if (start > 2) pages.push('...');
+                for (let p = start; p <= end; p++) pages.push(p);
+                if (end < totalPages - 1) pages.push('...');
+                pages.push(totalPages);
+            }
+
+            let html = `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <button type="button" class="page-link" onclick="${fnName}(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>&laquo; Sebelumnya</button>
+                </li>`;
+
+            pages.forEach(p => {
+                if (p === '...') {
+                    html += '<li class="page-item disabled"><span class="page-link">&hellip;</span></li>';
+                } else {
+                    html += `
+                        <li class="page-item ${p === currentPage ? 'active' : ''}">
+                            <button type="button" class="page-link fw-semibold" onclick="${fnName}(${p})">${p}</button>
+                        </li>`;
+                }
+            });
+
+            html += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <button type="button" class="page-link" onclick="${fnName}(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Berikutnya &raquo;</button>
+                </li>`;
+
+            pagEl.innerHTML = html;
+        }
+
+        function renderTidakHadirTable() {
+            const filterKls = document.getElementById('dash-filter-kelas').value;
+            const absenFiltered = filterKls
+                ? STATE.absensiHariIni.filter(a => a.kelas === filterKls)
+                : STATE.absensiHariIni;
+
+            const tidakHadir = absenFiltered.filter(r => ['I', 'S', 'A'].includes(String(r.status).toUpperCase()));
+            const tbTH = document.getElementById('tbody-dash-tidak-hadir');
+            const infoEl = document.getElementById('dash-tidak-hadir-info');
+            const pagEl = document.getElementById('dash-tidak-hadir-pagination');
+
+            const totalItems = tidakHadir.length;
+            if (totalItems === 0) {
+                tbTH.innerHTML = '<tr><td colspan="9" class="text-muted py-3">Tidak ada siswa berstatus Ijin, Sakit, atau Alpa pada tanggal ini.</td></tr>';
+                if (infoEl) infoEl.innerText = 'Menampilkan 0 siswa';
+                if (pagEl) pagEl.innerHTML = '';
+                return;
+            }
+
+            const totalPages = Math.max(1, Math.ceil(totalItems / TIDAK_HADIR_PER_PAGE));
+            if (STATE.tidakHadirPage > totalPages) STATE.tidakHadirPage = totalPages;
+            if (STATE.tidakHadirPage < 1) STATE.tidakHadirPage = 1;
+
+            const currentPage = STATE.tidakHadirPage;
+            const startIdx = (currentPage - 1) * TIDAK_HADIR_PER_PAGE;
+            const endIdx = Math.min(startIdx + TIDAK_HADIR_PER_PAGE, totalItems);
+            const pageItems = tidakHadir.slice(startIdx, endIdx);
+
+            tbTH.innerHTML = pageItems.map((r, idx) => `
+                <tr>
+                    <td>${startIdx + idx + 1}</td>
+                    <td><span class="badge bg-secondary">${escapeHTML(r.nis)}</span></td>
+                    <td class="text-start fw-bold">${escapeHTML(r.nama)}</td>
+                    <td>${escapeHTML(r.jenis_kelamin)}</td>
+                    <td><span class="badge bg-dark">${escapeHTML(r.kelas)}</span></td>
+                    <td>${getStatusBadgeHTML(r.status)}</td>
+                    <td>${escapeHTML(r.jam_masuk || '-')}</td>
+                    <td>${escapeHTML(r.jam_pulang || '-')}</td>
+                    <td class="text-start small">${escapeHTML(r.keterangan || '-')}</td>
+                </tr>`).join('');
+
+            if (infoEl) {
+                infoEl.innerText = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} siswa (Halaman ${currentPage} dari ${totalPages})`;
+            }
+            renderDashPaginationNav('dash-tidak-hadir-pagination', currentPage, totalPages, 'goToTidakHadirPage');
+        }
+
+        function goToTidakHadirPage(pageNum) {
+            STATE.tidakHadirPage = pageNum;
+            renderTidakHadirTable();
+        }
+
+        function renderAktivitasTable() {
+            const filterKls = document.getElementById('dash-filter-kelas').value;
+            const absenFiltered = filterKls
+                ? STATE.absensiHariIni.filter(a => a.kelas === filterKls)
+                : STATE.absensiHariIni;
+
+            const tbAkt = document.getElementById('tbody-dash-aktivitas');
+            const infoEl = document.getElementById('dash-aktivitas-info');
+            const pagEl = document.getElementById('dash-aktivitas-pagination');
+
+            const totalItems = absenFiltered.length;
+            if (totalItems === 0) {
+                tbAkt.innerHTML = '<tr><td colspan="9" class="text-muted py-3">Belum ada aktivitas scan gerbang pada tanggal ini.</td></tr>';
+                if (infoEl) infoEl.innerText = 'Menampilkan 0 aktivitas';
+                if (pagEl) pagEl.innerHTML = '';
+                return;
+            }
+
+            const totalPages = Math.max(1, Math.ceil(totalItems / AKTIVITAS_PER_PAGE));
+            if (STATE.aktivitasPage > totalPages) STATE.aktivitasPage = totalPages;
+            if (STATE.aktivitasPage < 1) STATE.aktivitasPage = 1;
+
+            const currentPage = STATE.aktivitasPage;
+            const startIdx = (currentPage - 1) * AKTIVITAS_PER_PAGE;
+            const endIdx = Math.min(startIdx + AKTIVITAS_PER_PAGE, totalItems);
+            const pageItems = absenFiltered.slice(startIdx, endIdx);
+
+            tbAkt.innerHTML = pageItems.map((r, idx) => `
+                <tr>
+                    <td>${startIdx + idx + 1}</td>
+                    <td><span class="badge bg-secondary">${escapeHTML(r.nis)}</span></td>
+                    <td class="text-start fw-bold">${escapeHTML(r.nama)}</td>
+                    <td>${escapeHTML(r.jenis_kelamin)}</td>
+                    <td><span class="badge bg-dark">${escapeHTML(r.kelas)}</span></td>
+                    <td class="fw-bold text-success">${escapeHTML(r.jam_masuk || '-')}</td>
+                    <td class="fw-bold text-primary">${escapeHTML(r.jam_pulang || '-')}</td>
+                    <td>${getStatusBadgeHTML(r.status)}</td>
+                    <td><span class="badge ${r.status_pulang === 'Pulang Normal' ? 'bg-success' : (r.status_pulang === 'Ijin Pulang Awal' ? 'bg-primary' : 'bg-secondary')}">${escapeHTML(r.status_pulang || '-')}</span></td>
+                </tr>`).join('');
+
+            if (infoEl) {
+                infoEl.innerText = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} aktivitas (Halaman ${currentPage} dari ${totalPages})`;
+            }
+            renderDashPaginationNav('dash-aktivitas-pagination', currentPage, totalPages, 'goToAktivitasPage');
+        }
+
+        function goToAktivitasPage(pageNum) {
+            STATE.aktivitasPage = pageNum;
+            renderAktivitasTable();
         }
 
         /**
