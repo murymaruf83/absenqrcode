@@ -1498,10 +1498,27 @@
                                     <input type="number" id="set-cooldown" class="form-control border-primary fw-bold" min="0" max="60" value="5" required>
                                     <small class="text-muted">Mencegah scan masuk ganda dianggap Ijin Pulang.</small>
                                 </div>
+								<div class="mb-3">
+                                    <label for="set-batas-alpa" class="form-label small fw-bold">Batas Terlambat Jadi Alpa Otomatis (Menit)</label>
+                                    <input type="number" id="set-batas-alpa" class="form-control border-danger fw-bold" min="0" max="240" value="60" required>
+                                    <small class="text-muted">Contoh: <strong>60</strong> = terlambat &gt; 1 jam otomatis Alpa (A). Isi <strong>0</strong> untuk menonaktifkan.</small>
+                                </div>
                                 <button type="submit" class="btn btn-primary w-100 fw-bold py-2">
                                     <i class="fas fa-save me-1"></i> Simpan Pengaturan
                                 </button>
                             </form>
+							<hr class="my-3">
+                            <div class="bg-light border border-danger rounded p-2 px-3">
+                                <div class="small fw-bold text-danger mb-1">
+                                    <i class="fas fa-robot me-1"></i> Eksekusi Auto-Alpa Massal Hari Ini
+                                </div>
+                                <div class="small text-muted mb-2">
+                                    Menandai seluruh siswa yang belum scan / belum berstatus S/I/A hari ini menjadi <strong>Alpa (A)</strong> secara instan.
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-danger w-100 fw-bold" onclick="jalankanAutoAlpaManual()">
+                                    <i class="fas fa-user-times me-1"></i> Jalankan Auto-Alpa Hari Ini
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -3501,13 +3518,15 @@
             }
 
             if (res.statusCode === 'CHECK_IN') {
-                const isLate = res.record && res.record.status === 'T';
-                playBeep(isLate ? 'warning' : 'success');
+                const st = res.record ? String(res.record.status || '').toUpperCase() : 'H';
+                const isAlpa = st === 'A';
+                const isLate = st === 'T';
+                playBeep(isAlpa ? 'error' : (isLate ? 'warning' : 'success'));
                 renderDisplayPanel({
-                    stateClass: isLate ? 'state-terlambat' : 'state-hadir',
-                    badgeClass: isLate ? 'bg-orange text-white' : 'bg-success',
-                    badgeText: isLate ? 'TERLAMBAT (MASUK)' : 'HADIR (MASUK)',
-                    bannerClass: isLate ? 'alert-warning' : 'alert-success',
+                    stateClass: isAlpa ? 'state-error' : (isLate ? 'state-terlambat' : 'state-hadir'),
+                    badgeClass: isAlpa ? 'bg-danger' : (isLate ? 'bg-orange text-white' : 'bg-success'),
+                    badgeText: isAlpa ? 'ALPA OTOMATIS (TELAT > BATAS)' : (isLate ? 'TERLAMBAT (MASUK)' : 'HADIR (MASUK)'),
+                    bannerClass: isAlpa ? 'alert-danger' : (isLate ? 'alert-warning' : 'alert-success'),
                     message: res.message,
                     jamScan: res.jamScan,
                     siswa: res.siswa,
@@ -5656,6 +5675,11 @@
                 document.getElementById('set-jam-masuk').value = STATE.pengaturan.jam_masuk || "07:15";
                 document.getElementById('set-jam-pulang').value = STATE.pengaturan.jam_pulang || "14:05";
                 document.getElementById('set-cooldown').value = STATE.pengaturan.cooldown_menit || 5;
+                const batasAlpaEl = document.getElementById('set-batas-alpa');
+                if (batasAlpaEl) {
+                    const val = parseInt(STATE.pengaturan.batas_alpa_menit, 10);
+                    batasAlpaEl.value = isNaN(val) ? 60 : val;
+                }
             }, "Memuat Pengaturan...");
 
             callBackend('getUsers_server', [], (users) => {
@@ -5676,11 +5700,13 @@
         }
 
         function savePengaturan() {
+            const batasVal = parseInt(document.getElementById('set-batas-alpa').value, 10);
             const payload = {
                 nama_sekolah: document.getElementById('set-nama-sekolah').value.trim(),
                 jam_masuk: document.getElementById('set-jam-masuk').value,
                 jam_pulang: document.getElementById('set-jam-pulang').value,
-                cooldown_menit: parseInt(document.getElementById('set-cooldown').value, 10) || 5
+                cooldown_menit: parseInt(document.getElementById('set-cooldown').value, 10) || 5,
+                batas_alpa_menit: isNaN(batasVal) ? 60 : batasVal
             };
             callBackend('savePengaturan_server', [JSON.stringify(payload)], (res) => {
                 if (res && res.success) {
@@ -5690,6 +5716,21 @@
                     customAlert(res && res.message ? res.message : "Gagal menyimpan pengaturan.");
                 }
             }, "Menyimpan Pengaturan...");
+        }
+
+        function jalankanAutoAlpaManual() {
+            customConfirm(
+                "Tandai seluruh siswa yang belum absen hari ini menjadi ALPA OTOMATIS sekarang?\n\n(Siswa yang sudah Hadir, Terlambat, Ijin, atau Sakit tidak akan terpengaruh.)",
+                () => {
+                    callBackend('jalankanAutoAlpa_server', [], (res) => {
+                        if (res && res.success) {
+                            customAlert(res.message);
+                        } else {
+                            customAlert(res && res.message ? res.message : "Gagal menjalankan Auto-Alpa.");
+                        }
+                    }, "Memproses Alpa Otomatis...");
+                }
+            );
         }
 
         function openModalUser() {
