@@ -1040,6 +1040,19 @@
                                 <tfoot id="tfoot-rekap-waktu" class="table-secondary fw-bold"></tfoot>
                             </table>
                         </div>
+						<tfoot id="tfoot-rekap-waktu" class="table-secondary fw-bold"></tfoot>
+                            </table>
+                        </div>
+
+                        <div id="rekap-waktu-footer" class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 mt-3 pt-2 border-top">
+                            <div id="rekap-waktu-info" class="small text-muted fw-semibold">
+                                Menampilkan 0 baris
+                            </div>
+                            <nav aria-label="Navigasi Halaman Rekap Periode">
+                                <ul id="rekap-waktu-pagination" class="pagination pagination-sm mb-0 flex-wrap justify-content-center"></ul>
+                            </nav>
+                        </div>
+                    </div>
                     </div>
 
                     <!-- TAB 2: REKAP JUMLAH H.T.I.S.A PER SISWA (PAGINASI 20 SISWA / HALAMAN) -->
@@ -1122,6 +1135,55 @@
                         </div>
                     </div>
                 </div>
+				<!-- TAB 3: DETAIL LOG SCAN HARIAN (PAGINASI 20 BARIS / HALAMAN) -->
+                    <div id="panel-rekap-detail" class="hidden">
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-2">
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <span class="small fw-bold text-dark" id="rekap-detail-title">
+                                    Detail Log Scan Gerbang
+                                </span>
+                                <span id="rekap-detail-count-badge" class="badge bg-primary rounded-pill">0 Data</span>
+                            </div>
+                            <div class="input-group input-group-sm" style="max-width: 280px;">
+                                <span class="input-group-text bg-white border-primary text-primary">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" id="rekap-search-detail" class="form-control border-primary" placeholder="Cari NIS, Nama, Kelas, atau Status..." oninput="REKAP_STATE.detailPage = 1; renderTableRekap();">
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table id="tabel-rekap-qr" class="table table-bordered table-striped table-sm align-middle text-center mb-0">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Tanggal</th>
+                                        <th>NIS</th>
+                                        <th class="text-start">Nama Siswa</th>
+                                        <th>L/P</th>
+                                        <th>Kelas</th>
+                                        <th>Jam Masuk</th>
+                                        <th>Jam Pulang</th>
+                                        <th>Status</th>
+                                        <th>Status Pulang</th>
+                                        <th class="text-start">Keterangan / Alasan Ijin</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-rekap">
+                                    <tr><td colspan="11" class="text-muted py-4">Pilih filter lalu klik <strong>Tampilkan</strong>.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div id="rekap-detail-footer" class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 mt-3 pt-2 border-top">
+                            <div id="rekap-detail-info" class="small text-muted fw-semibold">
+                                Menampilkan 0 data
+                            </div>
+                            <nav aria-label="Navigasi Halaman Detail Log Scan">
+                                <ul id="rekap-detail-pagination" class="pagination pagination-sm mb-0 flex-wrap justify-content-center"></ul>
+                            </nav>
+                        </div>
+                    </div>
             </div>
             
 			<!-- ================================================================= -->
@@ -4164,7 +4226,9 @@
             periodeLabel: '',
             summaryWaktu: [],
             summarySiswa: [],
+            waktuPage: 1,
             siswaPage: 1,
+            detailPage: 1,
             totals: { h: 0, t: 0, i: 0, s: 0, a: 0, total: 0, persen: 0 }
         };
 
@@ -4206,6 +4270,7 @@
 
         function setRekapGroupMode(mode) {
             REKAP_STATE.groupMode = mode;
+			REKAP_STATE.waktuPage = 1;
             const btnHari = document.getElementById('btn-mode-hari');
             const btnBulan = document.getElementById('btn-mode-bulan');
             if (btnHari) btnHari.classList.toggle('active', mode === 'hari');
@@ -4300,8 +4365,10 @@
                 if (btnHari) btnHari.classList.toggle('active', REKAP_STATE.groupMode === 'hari');
                 if (btnBulan) btnBulan.classList.toggle('active', REKAP_STATE.groupMode === 'bulan');
 
+                REKAP_STATE.waktuPage = 1;
                 REKAP_STATE.siswaPage = 1;
-				buildRekapWaktuSummary();
+                REKAP_STATE.detailPage = 1;
+                buildRekapWaktuSummary();
                 buildRekapSiswaSummary(kls);
 
                 renderRekapWaktuTable();
@@ -4401,27 +4468,97 @@
                 }));
         }
 
+        function renderRekapPaginationNav(pagElId, currentPage, totalPages, fnName) {
+            const pagEl = document.getElementById(pagElId);
+            if (!pagEl) return;
+
+            if (totalPages <= 1) {
+                pagEl.innerHTML = '';
+                return;
+            }
+
+            const pages = [];
+            if (totalPages <= 7) {
+                for (let p = 1; p <= totalPages; p++) pages.push(p);
+            } else {
+                pages.push(1);
+                let start = Math.max(2, currentPage - 1);
+                let end = Math.min(totalPages - 1, currentPage + 1);
+
+                if (currentPage <= 3) {
+                    start = 2;
+                    end = 4;
+                } else if (currentPage >= totalPages - 2) {
+                    start = totalPages - 3;
+                    end = totalPages - 1;
+                }
+
+                if (start > 2) pages.push('...');
+                for (let p = start; p <= end; p++) pages.push(p);
+                if (end < totalPages - 1) pages.push('...');
+                pages.push(totalPages);
+            }
+
+            let html = `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <button type="button" class="page-link" onclick="${fnName}(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>&laquo; Sebelumnya</button>
+                </li>`;
+
+            pages.forEach(p => {
+                if (p === '...') {
+                    html += '<li class="page-item disabled"><span class="page-link">&hellip;</span></li>';
+                } else {
+                    html += `
+                        <li class="page-item ${p === currentPage ? 'active' : ''}">
+                            <button type="button" class="page-link fw-semibold" onclick="${fnName}(${p})">${p}</button>
+                        </li>`;
+                }
+            });
+
+            html += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <button type="button" class="page-link" onclick="${fnName}(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Berikutnya &raquo;</button>
+                </li>`;
+
+            pagEl.innerHTML = html;
+        }
+
         function renderRekapWaktuTable() {
             const tb = document.getElementById('tbody-rekap-waktu');
             const tf = document.getElementById('tfoot-rekap-waktu');
             const titleEl = document.getElementById('rekap-waktu-title');
             const thLabel = document.getElementById('th-rekap-waktu-label');
+            const infoEl = document.getElementById('rekap-waktu-info');
+            const pagEl = document.getElementById('rekap-waktu-pagination');
             const list = REKAP_STATE.summaryWaktu || [];
             const tot = REKAP_STATE.totals;
 
-            const modeText = REKAP_STATE.groupMode === 'bulan' ? 'Per Bulan' : 'Per Hari (Per Tanggal)';
+            const isBulan = REKAP_STATE.groupMode === 'bulan';
+            const modeText = isBulan ? 'Per Bulan' : 'Per Hari (Per Tanggal)';
             if (titleEl) titleEl.innerText = `Rekap Jumlah H.T.I.S.A ${modeText} — ${REKAP_STATE.periodeLabel}`;
-            if (thLabel) thLabel.innerText = REKAP_STATE.groupMode === 'bulan' ? 'Bulan' : 'Tanggal';
+            if (thLabel) thLabel.innerText = isBulan ? 'Bulan' : 'Tanggal';
 
-            if (list.length === 0) {
+            const totalItems = list.length;
+            if (totalItems === 0) {
                 tb.innerHTML = '<tr><td colspan="10" class="text-muted py-4">Tidak ada data presensi pada periode dan kelas ini.</td></tr>';
                 tf.innerHTML = '';
+                if (infoEl) infoEl.innerText = 'Menampilkan 0 baris';
+                if (pagEl) pagEl.innerHTML = '';
                 return;
             }
 
-            tb.innerHTML = list.map((r, idx) => `
+            const totalPages = Math.max(1, Math.ceil(totalItems / REKAP_SISWA_PER_PAGE));
+            if (REKAP_STATE.waktuPage > totalPages) REKAP_STATE.waktuPage = totalPages;
+            if (REKAP_STATE.waktuPage < 1) REKAP_STATE.waktuPage = 1;
+
+            const currentPage = REKAP_STATE.waktuPage;
+            const startIdx = (currentPage - 1) * REKAP_SISWA_PER_PAGE;
+            const endIdx = Math.min(startIdx + REKAP_SISWA_PER_PAGE, totalItems);
+            const pageItems = list.slice(startIdx, endIdx);
+
+            tb.innerHTML = pageItems.map((r, idx) => `
                 <tr>
-                    <td>${idx + 1}</td>
+                    <td>${startIdx + idx + 1}</td>
                     <td class="fw-bold">${escapeHTML(r.label)}</td>
                     <td class="fw-bold text-success">${r.h}</td>
                     <td class="fw-bold text-orange">${r.t}</td>
@@ -4445,6 +4582,17 @@
                     <td>${tot.persen}%</td>
                     <td class="text-start small">${escapeHTML(tot.keterangan)}</td>
                 </tr>`;
+
+            const satuan = isBulan ? 'bulan' : 'hari';
+            if (infoEl) {
+                infoEl.innerText = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} ${satuan} (Halaman ${currentPage} dari ${totalPages})`;
+            }
+            renderRekapPaginationNav('rekap-waktu-pagination', currentPage, totalPages, 'goToRekapWaktuPage');
+        }
+
+        function goToRekapWaktuPage(pageNum) {
+            REKAP_STATE.waktuPage = pageNum;
+            renderRekapWaktuTable();
         }
 
         function renderRekapSiswaTable() {
@@ -4605,13 +4753,51 @@
 
         function renderTableRekap() {
             const tb = document.getElementById('tbody-rekap');
-            if (STATE.rekapData.length === 0) {
-                tb.innerHTML = '<tr><td colspan="11" class="text-muted py-4">Tidak ada data presensi pada tanggal/periode dan kelas ini.</td></tr>';
+            const infoEl = document.getElementById('rekap-detail-info');
+            const pagEl = document.getElementById('rekap-detail-pagination');
+            const titleEl = document.getElementById('rekap-detail-title');
+            const badgeEl = document.getElementById('rekap-detail-count-badge');
+            const searchEl = document.getElementById('rekap-search-detail');
+            const keyword = searchEl ? searchEl.value.trim().toLowerCase() : '';
+
+            const allRows = STATE.rekapData || [];
+            if (titleEl) titleEl.innerText = `Detail Log Scan Gerbang — ${REKAP_STATE.periodeLabel || ''}`;
+            if (badgeEl) badgeEl.innerText = `${allRows.length} Data`;
+
+            const filteredRows = keyword
+                ? allRows.filter(r =>
+                    String(r.tanggal || '').toLowerCase().includes(keyword) ||
+                    String(r.nis || '').toLowerCase().includes(keyword) ||
+                    String(r.nama || '').toLowerCase().includes(keyword) ||
+                    String(r.kelas || '').toLowerCase().includes(keyword) ||
+                    String(r.status || '').toLowerCase().includes(keyword) ||
+                    String(r.keterangan || '').toLowerCase().includes(keyword)
+                )
+                : allRows;
+
+            const totalItems = filteredRows.length;
+            if (totalItems === 0) {
+                const emptyText = allRows.length === 0
+                    ? 'Tidak ada data presensi pada tanggal/periode dan kelas ini.'
+                    : `Tidak ditemukan data scan dengan kata kunci "${escapeHTML(keyword)}".`;
+                tb.innerHTML = `<tr><td colspan="11" class="text-muted py-4">${emptyText}</td></tr>`;
+                if (infoEl) infoEl.innerText = 'Menampilkan 0 data';
+                if (pagEl) pagEl.innerHTML = '';
                 return;
             }
-            tb.innerHTML = STATE.rekapData.map((r, idx) => `
+
+            const totalPages = Math.max(1, Math.ceil(totalItems / REKAP_SISWA_PER_PAGE));
+            if (REKAP_STATE.detailPage > totalPages) REKAP_STATE.detailPage = totalPages;
+            if (REKAP_STATE.detailPage < 1) REKAP_STATE.detailPage = 1;
+
+            const currentPage = REKAP_STATE.detailPage;
+            const startIdx = (currentPage - 1) * REKAP_SISWA_PER_PAGE;
+            const endIdx = Math.min(startIdx + REKAP_SISWA_PER_PAGE, totalItems);
+            const pageItems = filteredRows.slice(startIdx, endIdx);
+
+            tb.innerHTML = pageItems.map((r, idx) => `
                 <tr>
-                    <td>${idx + 1}</td>
+                    <td>${startIdx + idx + 1}</td>
                     <td>${escapeHTML(r.tanggal)}</td>
                     <td>${escapeHTML(r.nis)}</td>
                     <td class="text-start fw-bold">${escapeHTML(r.nama)}</td>
@@ -4623,6 +4809,16 @@
                     <td>${escapeHTML(r.status_pulang || '-')}</td>
                     <td class="text-start small">${escapeHTML(r.keterangan || '-')}</td>
                 </tr>`).join('');
+
+            if (infoEl) {
+                infoEl.innerText = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} data scan (Halaman ${currentPage} dari ${totalPages})`;
+            }
+            renderRekapPaginationNav('rekap-detail-pagination', currentPage, totalPages, 'goToRekapDetailPage');
+        }
+
+        function goToRekapDetailPage(pageNum) {
+            REKAP_STATE.detailPage = pageNum;
+            renderTableRekap();
         }
 
         function exportRekapExcel() {
