@@ -308,12 +308,22 @@
                 background: #fff;
             }
             .blanko-cut-line {
-                margin-top: 10px;
-                border-top: 1px dashed #444;
+                margin: 16px 0;
+                border-top: 1.5px dashed #333;
                 text-align: center;
                 font-size: 9.5px;
-                color: #444;
-                padding-top: 3px;
+                color: #333;
+                padding-top: 4px;
+            }
+            .blanko-arsip-tag {
+                display: inline-block;
+                border: 1.2px solid #000;
+                padding: 1px 8px;
+                font-size: 9.5px;
+                font-weight: bold;
+                letter-spacing: 0.4px;
+                margin-bottom: 4px;
+                background: #f2f2f2;
             }
         }
 		/* Navigasi Tab Profesional Halaman Rekap (Terpisah dari Sidebar .nav-item) */
@@ -5471,72 +5481,87 @@
                 .replace(/^Ijin Pulang:\s*/i, '')
                 .trim() || '-';
 
+            const buatLembarBlanko = (labelArsip, catatanBawah) => `
+                <div class="blanko-izin-box">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <span class="blanko-arsip-tag">${escapeHTML(labelArsip)}</span>
+                        <span style="font-size: 10px;">Nomor: ${escapeHTML(rec.id_absen || '-')}</span>
+                    </div>
+
+                    <div style="text-align:center; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 8px;">
+                        <div style="font-size: 13px; font-weight: bold; letter-spacing: 0.5px;">${escapeHTML(namaSekolah)}</div>
+                        <div style="font-size: 12px; font-weight: bold; margin-top: 2px; text-decoration: underline;">SURAT IZIN PULANG (MENINGGALKAN SEKOLAH)</div>
+                    </div>
+
+                    <table style="width:100%; font-size: 11.5px; border-collapse: collapse; margin-bottom: 6px;">
+                        <tr>
+                            <td style="width: 15%; padding: 2px 0;">Nama Siswa</td>
+                            <td style="width: 2%;">:</td>
+                            <td style="width: 38%; font-weight: bold;">${escapeHTML(String(rec.nama || '-').toUpperCase())}</td>
+                            <td style="width: 15%; padding: 2px 0;">Hari / Tanggal</td>
+                            <td style="width: 2%;">:</td>
+                            <td style="width: 28%;">${escapeHTML(hariTanggal)}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 2px 0;">NIS</td>
+                            <td>:</td>
+                            <td>${escapeHTML(rec.nis || '-')}</td>
+                            <td style="padding: 2px 0;">Jam Masuk</td>
+                            <td>:</td>
+                            <td>${escapeHTML(rec.jam_masuk || '-')} WIB</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 2px 0;">Kelas / L-P</td>
+                            <td>:</td>
+                            <td><strong>${escapeHTML(rec.kelas || '-')}</strong> (${escapeHTML(jkLengkap)})</td>
+                            <td style="padding: 2px 0;">Jam Keluar</td>
+                            <td>:</td>
+                            <td><strong>${escapeHTML(rec.jam_pulang || '-')} WIB</strong></td>
+                        </tr>
+                    </table>
+
+                    <div style="border: 1px solid #000; padding: 5px 8px; font-size: 11.5px; margin-bottom: 6px; background: #fafafa;">
+                        <strong>Alasan / Keperluan Izin Pulang:</strong> ${escapeHTML(alasanBersih)}
+                    </div>
+
+                    <div style="font-size: 10px; font-style: italic; margin-bottom: 10px;">
+                        ${escapeHTML(catatanBawah)}
+                    </div>
+
+                    <table style="width:100%; font-size: 11.5px; text-align: center; border-collapse: collapse;">
+                        <tr>
+                            <td style="width: 50%; vertical-align: top;">
+                                Mengetahui,<br>
+                                <strong>Wali Kelas ${escapeHTML(rec.kelas || '')}</strong>
+                                <div style="height: 44px;"></div>
+                                ( ............................................. )
+                            </td>
+                            <td style="width: 50%; vertical-align: top;">
+                                Disetujui oleh,<br>
+                                <strong>Guru Piket</strong>
+                                <div style="height: 44px;"></div>
+                                ( ............................................. )
+                            </td>
+                        </tr>
+                    </table>
+                </div>`;
+
             const container = document.getElementById('print-container-global');
             container.innerHTML = `
                 <div class="blanko-izin-sheet">
-                    <div class="blanko-izin-box">
-                        <div style="text-align:center; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 8px;">
-                            <div style="font-size: 13px; font-weight: bold; letter-spacing: 0.5px;">${escapeHTML(namaSekolah)}</div>
-                            <div style="font-size: 12px; font-weight: bold; margin-top: 2px; text-decoration: underline;">SURAT IZIN PULANG (MENINGGALKAN SEKOLAH)</div>
-                            <div style="font-size: 10px; margin-top: 2px;">Nomor: ${escapeHTML(rec.id_absen || '-')}</div>
-                        </div>
-
-                        <table style="width:100%; font-size: 11.5px; border-collapse: collapse; margin-bottom: 6px;">
-                            <tr>
-                                <td style="width: 15%; padding: 2px 0;">Nama Siswa</td>
-                                <td style="width: 2%;">:</td>
-                                <td style="width: 38%; font-weight: bold;">${escapeHTML(String(rec.nama || '-').toUpperCase())}</td>
-                                <td style="width: 15%; padding: 2px 0;">Hari / Tanggal</td>
-                                <td style="width: 2%;">:</td>
-                                <td style="width: 28%;">${escapeHTML(hariTanggal)}</td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 2px 0;">NIS</td>
-                                <td>:</td>
-                                <td>${escapeHTML(rec.nis || '-')}</td>
-                                <td style="padding: 2px 0;">Jam Masuk</td>
-                                <td>:</td>
-                                <td>${escapeHTML(rec.jam_masuk || '-')} WIB</td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 2px 0;">Kelas / L-P</td>
-                                <td>:</td>
-                                <td><strong>${escapeHTML(rec.kelas || '-')}</strong> (${escapeHTML(jkLengkap)})</td>
-                                <td style="padding: 2px 0;">Jam Keluar</td>
-                                <td>:</td>
-                                <td><strong>${escapeHTML(rec.jam_pulang || '-')} WIB</strong></td>
-                            </tr>
-                        </table>
-
-                        <div style="border: 1px solid #000; padding: 5px 8px; font-size: 11.5px; margin-bottom: 6px; background: #fafafa;">
-                            <strong>Alasan / Keperluan Izin Pulang:</strong> ${escapeHTML(alasanBersih)}
-                        </div>
-
-                        <div style="font-size: 10px; font-style: italic; margin-bottom: 10px;">
-                            * Blanko ini wajib ditandatangani Wali Kelas &amp; Guru Piket, lalu diserahkan kepada Petugas Keamanan (Satpam) di Gerbang Sekolah saat pulang.
-                        </div>
-
-                        <table style="width:100%; font-size: 11.5px; text-align: center; border-collapse: collapse;">
-                            <tr>
-                                <td style="width: 50%; vertical-align: top;">
-                                    Mengetahui,<br>
-                                    <strong>Wali Kelas ${escapeHTML(rec.kelas || '')}</strong>
-                                    <div style="height: 46px;"></div>
-                                    ( ............................................. )
-                                </td>
-                                <td style="width: 50%; vertical-align: top;">
-                                    Disetujui oleh,<br>
-                                    <strong>Guru Piket</strong>
-                                    <div style="height: 46px;"></div>
-                                    ( ............................................. )
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
+                    ${buatLembarBlanko(
+                        'LEMBAR 1 : ARSIP KELAS / WALI KELAS',
+                        '* Wajib ditandatangani Wali Kelas & Guru Piket, lalu diserahkan kepada Guru Pengajar / Arsip Kelas.'
+                    )}
 
                     <div class="blanko-cut-line">
-                        &#9986; Potong di garis ini &mdash; sisa setengah kertas A4 dapat digunakan kembali untuk cetakan berikutnya &#9986;
+                        &#9986; Gunting di garis ini &mdash; Lembar 1 untuk Kelas, Lembar 2 untuk Security / Satpam Gerbang &#9986;
                     </div>
+
+                    ${buatLembarBlanko(
+                        'LEMBAR 2 : ARSIP SECURITY / SATPAM GERBANG',
+                        '* Wajib ditandatangani Wali Kelas & Guru Piket, lalu diserahkan kepada Petugas Security di Gerbang Sekolah saat pulang.'
+                    )}
                 </div>`;
 
             setTimeout(() => { window.print(); }, 250);
