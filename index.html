@@ -702,12 +702,12 @@
                         </div>
                     </div>
 
-                    <!-- Pemilih Kelas Kartu Kiri (Kelas X) & Kartu Kanan (Kelas XI / XII) -->
+                    <!-- Pemilih Kelas Kartu Kiri & Kartu Kanan (Dinamis Semua Jenjang) -->
                     <div class="row g-2 mb-3">
                         <div class="col-12 col-md-6">
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text bg-primary text-white fw-bold">
-                                    <i class="fas fa-filter me-1"></i> Kartu Kiri (X)
+                                    <i class="fas fa-filter me-1"></i> Kartu Kiri
                                 </span>
                                 <select id="dash-slot-kiri-select" class="form-select border-primary fw-bold" onchange="onDashStatSlotChange('kiri')">
                                     <option value="">-- Pilih Kelas --</option>
@@ -717,7 +717,7 @@
                         <div class="col-12 col-md-6">
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text bg-info text-white fw-bold">
-                                    <i class="fas fa-filter me-1"></i> Kartu Kanan (XI / XII)
+                                    <i class="fas fa-filter me-1"></i> Kartu Kanan
                                 </span>
                                 <select id="dash-slot-kanan-select" class="form-select border-info fw-bold" onchange="onDashStatSlotChange('kanan')">
                                     <option value="">-- Pilih Kelas --</option>
@@ -1654,15 +1654,12 @@
                         <div class="col-6 col-md-3">
                             <label for="stat-filter-tingkat" class="form-label small fw-bold mb-1">Filter Tingkat</label>
                             <select id="stat-filter-tingkat" class="form-select form-select-sm border-primary fw-semibold" onchange="renderStatistikSemuaKelasUI()">
-                                <option value="">Semua Tingkat (X, XI, XII)</option>
-                                <option value="X">Kelas X</option>
-                                <option value="XI">Kelas XI</option>
-                                <option value="XII">Kelas XII</option>
+                                <option value="">Semua Tingkat</option>
                             </select>
                         </div>
                         <div class="col-8 col-md-4">
                             <label for="stat-search-kelas" class="form-label small fw-bold mb-1">Cari Nama Kelas</label>
-                            <input type="text" id="stat-search-kelas" class="form-control form-control-sm border-primary" placeholder="Contoh: X-1, XI-2, XII..." oninput="renderStatistikSemuaKelasUI()">
+                            <input type="text" id="stat-search-kelas" class="form-control form-control-sm border-primary" placeholder="Contoh: 1A, 7B, VII-1, X-1..." oninput="renderStatistikSemuaKelasUI()">
                         </div>
                         <div class="col-4 col-md-2">
                             <button type="button" class="btn btn-sm btn-primary w-100 fw-bold" onclick="loadStatistikPageData()">
@@ -2923,7 +2920,7 @@
         }
 
         function populateAllClassDropdowns() {
-            const kelasList = [...new Set(STATE.siswa.map(s => String(s.kelas || '').trim()).filter(Boolean))].sort();
+            const kelasList = getDaftarKelasTerurut();
             ['dash-filter-kelas', 'siswa-filter-kelas', 'rekap-filter-kelas'].forEach(id => {
                 const el = document.getElementById(id);
                 if (!el) return;
@@ -2931,6 +2928,7 @@
                 el.innerHTML = '<option value="">Semua Kelas</option>' + kelasList.map(k => `<option value="${escapeHTML(k)}">${escapeHTML(k)}</option>`).join('');
                 if (kelasList.includes(prevVal)) el.value = prevVal;
             });
+            populateStatTingkatDropdown();
         }
 
         function formatTanggalIndo(tglStr) {
@@ -2986,36 +2984,92 @@
         }
 		
 		function getTingkatKelas(kelasStr) {
-            const k = String(kelasStr || '').trim().toUpperCase();
-            if (/^(XII|12)([^I]|$)/.test(k)) return 'XII';
-            if (/^(XI|11)([^I]|$)/.test(k)) return 'XI';
-            if (/^(X|10)([^I]|$)/.test(k)) return 'X';
-            return 'LAINNYA';
+            const ROMAN_ORDER_MAP = {
+            'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5, 'VI': 6,
+            'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10, 'XI': 11, 'XII': 12
+        };
+
+        function formatLabelKelas(kelasStr) {
+            const k = String(kelasStr || '').trim();
+            if (!k) return '-';
+            return /^kelas\s+/i.test(k) ? k : `Kelas ${k}`;
+        }
+
+        function getTingkatKelas(kelasStr) {
+            let k = String(kelasStr || '').trim().toUpperCase();
+            k = k.replace(/^(KELAS|KLS)\.?\s*/i, '').trim();
+            if (!k) return 'LAINNYA';
+
+            // 1. Format angka di awal (SD: 1-6, SMP: 7-9, SMA/SMK: 10-12) -> 1A, 4-B, 7.1, 10 TKJ 1
+            const numMatch = k.match(/^(\d{1,2})(?=[^0-9]|$)/);
+            if (numMatch) {
+                return String(parseInt(numMatch[1], 10));
+            }
+
+            // 2. Format angka Romawi di awal (I - XII) -> I A, IV B, VII-1, VIII A, IX-2, X-1, XII IPA 1
+            const romanMatch = k.match(/^(XII|XI|IX|VIII|VII|VI|IV|III|II|X|V|I)(?=[\s\-\._/0-9]|$|[A-H]$)/);
+            if (romanMatch) {
+                return romanMatch[1];
+            }
+
+            // 3. Fallback fleksibel (misal: TK A, PAUD Melati) -> ambil kata depan
+            const tokenMatch = k.match(/^([A-Z0-9]+)/);
+            return tokenMatch ? tokenMatch[1] : k;
+        }
+
+        function getUrutanTingkat(tingkatStr) {
+            const t = String(tingkatStr || '').trim().toUpperCase();
+            if (/^\d+$/.test(t)) return parseInt(t, 10);
+            if (ROMAN_ORDER_MAP[t]) return ROMAN_ORDER_MAP[t];
+            return 999;
+        }
+
+        function sortTingkatList(tingkatArr) {
+            return [...tingkatArr].sort((a, b) => {
+                const oa = getUrutanTingkat(a);
+                const ob = getUrutanTingkat(b);
+                if (oa !== ob) return oa - ob;
+                return String(a).localeCompare(String(b), 'id', { numeric: true, sensitivity: 'base' });
+            });
         }
 
         function getDaftarKelasTerurut() {
             return [...new Set((STATE.siswa || []).map(s => String(s.kelas || '').trim()).filter(Boolean))]
-                .sort((a, b) => a.localeCompare(b, 'id', { numeric: true, sensitivity: 'base' }));
+                .sort((a, b) => {
+                    const oa = getUrutanTingkat(getTingkatKelas(a));
+                    const ob = getUrutanTingkat(getTingkatKelas(b));
+                    if (oa !== ob) return oa - ob;
+                    return a.localeCompare(b, 'id', { numeric: true, sensitivity: 'base' });
+                });
         }
 
-        function buildOptgroupKelasHTML(daftarKelas, prioritasTingkatList) {
-            const groups = { X: [], XI: [], XII: [], LAINNYA: [] };
-            daftarKelas.forEach(k => groups[getTingkatKelas(k)].push(k));
+        function populateStatTingkatDropdown() {
+            const sel = document.getElementById('stat-filter-tingkat');
+            if (!sel) return;
+            const prevVal = sel.value;
+            const daftarKelas = getDaftarKelasTerurut();
+            const tingkatList = sortTingkatList([...new Set(daftarKelas.map(k => getTingkatKelas(k)))]);
 
-            const labelMap = {
-                X: 'Kelas X',
-                XI: 'Kelas XI',
-                XII: 'Kelas XII',
-                LAINNYA: 'Kelas Lainnya'
-            };
+            sel.innerHTML = '<option value="">Semua Tingkat</option>' +
+                tingkatList.map(t => `<option value="${escapeHTML(t)}">Tingkat ${escapeHTML(t)}</option>`).join('');
 
-            const urutan = [...prioritasTingkatList, 'X', 'XI', 'XII', 'LAINNYA']
-                .filter((v, idx, arr) => arr.indexOf(v) === idx);
+            if (prevVal && tingkatList.includes(prevVal)) {
+                sel.value = prevVal;
+            }
+        }
 
-            return urutan
-                .filter(g => groups[g].length > 0)
-                .map(g => `<optgroup label="${labelMap[g]}">` +
-                    groups[g].map(k => `<option value="${escapeHTML(k)}">Kelas ${escapeHTML(k)}</option>`).join('') +
+        function buildOptgroupKelasHTML(daftarKelas) {
+            const groups = {};
+            daftarKelas.forEach(k => {
+                const tg = getTingkatKelas(k);
+                if (!groups[tg]) groups[tg] = [];
+                groups[tg].push(k);
+            });
+
+            const tingkatUrut = sortTingkatList(Object.keys(groups));
+            return tingkatUrut
+                .map(tg => `<optgroup label="Tingkat ${escapeHTML(tg)}">` +
+                    groups[tg].map(k => `<option value="${escapeHTML(k)}">${escapeHTML(formatLabelKelas(k))}</option>`).join('') +
                     `</optgroup>`)
                 .join('');
         }
@@ -3058,7 +3112,7 @@
                     <div class="kelas-stat-card" ${borderStyle}>
                         <div class="d-flex justify-content-between align-items-center gap-2">
                             <div class="fw-bold text-dark fs-6">
-                                <i class="fas fa-chalkboard-user text-primary me-2"></i>Kelas ${escapeHTML(st.kelas)}
+                                <i class="fas fa-chalkboard-user text-primary me-2"></i>${escapeHTML(formatLabelKelas(st.kelas))}
                             </div>
                             <span class="kelas-stat-badge-jml">Jumlah: ${st.totalSiswa} Siswa</span>
                         </div>
@@ -3126,24 +3180,21 @@
                 return;
             }
 
-            // Isi dropdown kiri (prioritas Kelas X) & kanan (prioritas Kelas XI / XII)
-            selKiri.innerHTML = buildOptgroupKelasHTML(daftarKelas, ['X', 'XI', 'XII']);
-            selKanan.innerHTML = buildOptgroupKelasHTML(daftarKelas, ['XI', 'XII', 'X']);
+            const optgroupHTML = buildOptgroupKelasHTML(daftarKelas);
+            selKiri.innerHTML = optgroupHTML;
+            selKanan.innerHTML = optgroupHTML;
 
-            // Tentukan default pilihan Kartu Kiri: utamakan Kelas X
+            // Default Kartu Kiri: kelas pertama sesuai urutan tingkat (misal 1A, I A, 7A, VII-1, atau X-1)
             if (!STATE.dashSlotKiriKelas || !daftarKelas.includes(STATE.dashSlotKiriKelas)) {
-                const defaultX = daftarKelas.find(k => getTingkatKelas(k) === 'X');
-                STATE.dashSlotKiriKelas = defaultX || daftarKelas[0];
+                STATE.dashSlotKiriKelas = daftarKelas[0];
             }
 
-            // Tentukan default pilihan Kartu Kanan: utamakan Kelas XI / XII, fallback ke kelas berbeda
+            // Default Kartu Kanan: otomatis pilih tingkat berbeda jika ada, fallback ke kelas urutan berikutnya
             if (!STATE.dashSlotKananKelas || !daftarKelas.includes(STATE.dashSlotKananKelas)) {
-                const defaultXIXII = daftarKelas.find(k => {
-                    const tg = getTingkatKelas(k);
-                    return tg === 'XI' || tg === 'XII';
-                });
+                const tingkatKiri = getTingkatKelas(STATE.dashSlotKiriKelas);
+                const bedaTingkat = daftarKelas.find(k => getTingkatKelas(k) !== tingkatKiri);
                 const kelasLain = daftarKelas.find(k => k !== STATE.dashSlotKiriKelas);
-                STATE.dashSlotKananKelas = defaultXIXII || kelasLain || daftarKelas[0];
+                STATE.dashSlotKananKelas = bedaTingkat || kelasLain || daftarKelas[0];
             }
 
             selKiri.value = STATE.dashSlotKiriKelas;
@@ -3224,10 +3275,13 @@
                 return;
             }
 
+            const tingkatUrut = sortTingkatList([...new Set(getDaftarKelasTerurut().map(k => getTingkatKelas(k)))]);
+            const warnaPalette = ['#0d6efd', '#0891b2', '#6f42c1', '#198754', '#fd7e14', '#dc3545'];
+
             grid.innerHTML = statsList.map(st => {
                 const tg = getTingkatKelas(st.kelas);
-                const warna = tg === 'XII' ? '#6f42c1' : (tg === 'XI' ? '#0891b2' : '#0d6efd');
-                return buildKelasStatCardHTML(st, warna);
+                const idxWarna = Math.max(0, tingkatUrut.indexOf(tg)) % warnaPalette.length;
+                return buildKelasStatCardHTML(st, warnaPalette[idxWarna]);
             }).join('');
         }
 
@@ -3239,7 +3293,7 @@
 
             const tgl = STATE.statTanggal || getTodayStr();
             const tingkat = document.getElementById('stat-filter-tingkat').value;
-            const labelTingkat = tingkat ? `Tingkat Kelas ${tingkat}` : 'Semua Tingkat (X, XI, XII)';
+            const labelTingkat = tingkat ? `Tingkat ${tingkat}` : 'Semua Tingkat / Kelas';
             const todayIndo = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
             const tot = statsList.reduce((acc, r) => {
@@ -3254,7 +3308,7 @@
             const rowsHtml = statsList.map((r, idx) => `
                 <tr>
                     <td style="padding:5px;">${idx + 1}</td>
-                    <td style="padding:5px; font-weight:bold;">Kelas ${escapeHTML(r.kelas)}</td>
+                    <td style="padding:5px; font-weight:bold;">${escapeHTML(formatLabelKelas(r.kelas))}</td>
                     <td style="padding:5px;">${r.totalSiswa}</td>
                     <td style="padding:5px;">${r.h}</td>
                     <td style="padding:5px;">${r.t}</td>
@@ -3302,12 +3356,13 @@
                         <tbody>${rowsHtml}</tbody>
                     </table>
                     <div style="width: 250px; float:right; text-align:center; margin-top: 28px; font-size: 13px;">
-                        ${todayIndo}<br>Wakil Kepala Sekolah Bidang Kurikulum<br><br><br><br>
+                        ${todayIndo}<br>Kepala Sekolah / Bidang Kurikulum<br><br><br><br>
                         <strong>${escapeHTML(STATE.user ? STATE.user.nama : '__________________')}</strong>
                     </div>
                 </div>`;
             setTimeout(() => { window.print(); }, 250);
         }
+		
 		
 
         function renderDashPaginationNav(pagElId, currentPage, totalPages, fnName) {
