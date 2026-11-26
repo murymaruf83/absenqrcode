@@ -576,6 +576,9 @@
 			<div class="nav-item" id="nav-rapor" onclick="navigate('rapor')">
                 <i class="fas fa-graduation-cap"></i> <span>Rapor</span>
             </div>
+			<div class="nav-item" id="nav-statistik" onclick="navigate('statistik')">
+                <i class="fas fa-chart-pie"></i> <span>Statistik</span>
+            </div>
             <div class="nav-item admin-only" id="nav-pengaturan" onclick="navigate('pengaturan')">
                 <i class="fas fa-sliders-h"></i> <span>Pengaturan</span>
             </div>
@@ -645,21 +648,51 @@
                     </div>
                 </div>
                 
-				<!-- PANEL STATISTIK KEHADIRAN PER KELAS (BERDASARKAN TANGGAL) -->
+				<!-- PANEL STATISTIK KEHADIRAN 2 KELAS PILIHAN (DASHBOARD RINGKAS) -->
                 <div class="panel-stat-kelas" id="card-stat-kelas-dashboard">
                     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
                         <div class="d-flex align-items-center flex-wrap gap-2">
                             <h6 class="m-0 fw-bold text-dark">
                                 <i class="fas fa-chart-pie text-success me-2"></i>
-                                Statistik Kehadiran Kelas (Berdasarkan Tanggal)
+                                Statistik Kehadiran Kelas (Perbandingan Cepat)
                             </h6>
                             <span id="dash-stat-kelas-tgl" class="badge bg-light text-primary border border-primary"></span>
                         </div>
-                        <button type="button" class="btn btn-sm btn-danger fw-bold px-3" onclick="cetakLaporanHarianPDF()">
-                            <i class="fas fa-print me-1"></i> Cetak PDF Laporan Harian
-                        </button>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary fw-bold px-3" onclick="navigate('statistik')">
+                                <i class="fas fa-th-large me-1"></i> Lihat Semua Kelas
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger fw-bold px-3" onclick="cetakLaporanHarianPDF()">
+                                <i class="fas fa-print me-1"></i> Cetak PDF Harian
+                            </button>
+                        </div>
                     </div>
 
+                    <!-- Pemilih Kelas Kartu Kiri (Kelas X) & Kartu Kanan (Kelas XI / XII) -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-12 col-md-6">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-primary text-white fw-bold">
+                                    <i class="fas fa-filter me-1"></i> Kartu Kiri (X)
+                                </span>
+                                <select id="dash-slot-kiri-select" class="form-select border-primary fw-bold" onchange="onDashStatSlotChange('kiri')">
+                                    <option value="">-- Pilih Kelas --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-info text-white fw-bold">
+                                    <i class="fas fa-filter me-1"></i> Kartu Kanan (XI / XII)
+                                </span>
+                                <select id="dash-slot-kanan-select" class="form-select border-info fw-bold" onchange="onDashStatSlotChange('kanan')">
+                                    <option value="">-- Pilih Kelas --</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Grid Tepat 2 Kartu Statistik -->
                     <div class="row g-3" id="dash-stat-kelas-grid">
                         <div class="col-12 text-center text-muted py-3 small">Memuat statistik kelas...</div>
                     </div>
@@ -1562,6 +1595,84 @@
                 </div>
             </div>
 			
+			<!-- ================================================================= -->
+            <!-- 4C. VIEW STATISTIK KEHADIRAN SELURUH KELAS (MENU KHUSUS)          -->
+            <!-- ================================================================= -->
+            <div id="view-statistik" class="hidden">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+                    <h5 class="fw-bold text-primary m-0">
+                        <i class="fas fa-chart-pie me-2"></i> Statistik Kehadiran Seluruh Kelas
+                        <span id="stat-all-label-tgl" class="badge bg-light text-primary border border-primary ms-1"></span>
+                    </h5>
+                    <button type="button" class="btn btn-sm btn-danger fw-bold px-3 shadow-sm" onclick="cetakStatistikSemuaKelasPDF()">
+                        <i class="fas fa-file-pdf me-1"></i> Cetak PDF Statistik Kelas
+                    </button>
+                </div>
+
+                <!-- Filter Tanggal, Tingkat & Cari Kelas -->
+                <div class="card-custom border border-primary mb-3">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-6 col-md-3">
+                            <label for="stat-filter-tanggal" class="form-label small fw-bold mb-1">Tanggal</label>
+                            <input type="date" id="stat-filter-tanggal" class="form-control form-control-sm border-primary fw-semibold" onchange="loadStatistikPageData()">
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label for="stat-filter-tingkat" class="form-label small fw-bold mb-1">Filter Tingkat</label>
+                            <select id="stat-filter-tingkat" class="form-select form-select-sm border-primary fw-semibold" onchange="renderStatistikSemuaKelasUI()">
+                                <option value="">Semua Tingkat (X, XI, XII)</option>
+                                <option value="X">Kelas X</option>
+                                <option value="XI">Kelas XI</option>
+                                <option value="XII">Kelas XII</option>
+                            </select>
+                        </div>
+                        <div class="col-8 col-md-4">
+                            <label for="stat-search-kelas" class="form-label small fw-bold mb-1">Cari Nama Kelas</label>
+                            <input type="text" id="stat-search-kelas" class="form-control form-control-sm border-primary" placeholder="Contoh: X-1, XI-2, XII..." oninput="renderStatistikSemuaKelasUI()">
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <button type="button" class="btn btn-sm btn-primary w-100 fw-bold" onclick="loadStatistikPageData()">
+                                <i class="fas fa-sync-alt me-1"></i> Muat
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Strip Ringkasan Keseluruhan Sesuai Filter -->
+                <div class="row g-2 mb-3">
+                    <div class="col-6 col-md-3">
+                        <div class="stat-card bg-primary py-2">
+                            <h4 class="fw-bold m-0" id="stat-sum-kelas">0</h4>
+                            <small>Jumlah Kelas</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="stat-card bg-secondary py-2">
+                            <h4 class="fw-bold m-0" id="stat-sum-siswa">0</h4>
+                            <small>Total Siswa</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="stat-card bg-success py-2">
+                            <h4 class="fw-bold m-0" id="stat-sum-hadir">0</h4>
+                            <small>Hadir + Telat</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="stat-card bg-dark py-2">
+                            <h4 class="fw-bold m-0 text-warning" id="stat-sum-rasio">0%</h4>
+                            <small>Rata-rata Kehadiran</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grid Kartu Seluruh Kelas -->
+                <div class="panel-stat-kelas">
+                    <div class="row g-3" id="stat-all-kelas-grid">
+                        <div class="col-12 text-center text-muted py-4">Memuat statistik seluruh kelas...</div>
+                    </div>
+                </div>
+            </div>
+			
             <!-- ================================================================= -->
             <!-- 5. VIEW PENGATURAN & AKUN (ADMIN ONLY)                            -->
             <!-- ================================================================= -->
@@ -2262,7 +2373,11 @@
             belumAbsenPage: 1,
             siswaPage: 1,
             tidakHadirPage: 1,
-            aktivitasPage: 1
+            aktivitasPage: 1,
+            dashSlotKiriKelas: "",
+            dashSlotKananKelas: "",
+            statAbsensi: [],
+            statTanggal: ""
         };
 
         function showLoader(msg = "Memproses Data...") {
@@ -2723,7 +2838,7 @@
                 document.body.classList.remove('kiosk-mode');
             }
 
-            const pages = ['dashboard', 'scan', 'siswa', 'rekap', 'rapor', 'pengaturan'];
+            const pages = ['dashboard', 'scan', 'siswa', 'rekap', 'rapor', 'statistik', 'pengaturan'];
             pages.forEach(p => {
                 const nav = document.getElementById('nav-' + p);
                 const view = document.getElementById('view-' + p);
@@ -2740,6 +2855,7 @@
                 siswa: "Data Siswa & Kartu QR",
                 rekap: "Rekap Presensi",
                 rapor: "Rapor Individu",
+                statistik: "Statistik Kelas",
                 pengaturan: "Pengaturan & Akun"
             };
             document.getElementById('app-title').innerText = titles[page] || "Dashboard";
@@ -2747,8 +2863,8 @@
             if (page === 'dashboard') loadDashboardData();
             if (page === 'scan') initScanPage();
             if (page === 'siswa') loadSiswaData();
-            if (page === 'rekap') initRekapPage();
             if (page === 'rapor') initRaporPage();
+            if (page === 'statistik') initStatistikPage();
             if (page === 'pengaturan') loadPengaturanDanUsers();
         }
 
@@ -2833,104 +2949,328 @@
             renderStatistikKelasDashboard();
         }
 		
-		function renderStatistikKelasDashboard() {
+		function getTingkatKelas(kelasStr) {
+            const k = String(kelasStr || '').trim().toUpperCase();
+            if (/^(XII|12)([^I]|$)/.test(k)) return 'XII';
+            if (/^(XI|11)([^I]|$)/.test(k)) return 'XI';
+            if (/^(X|10)([^I]|$)/.test(k)) return 'X';
+            return 'LAINNYA';
+        }
+
+        function getDaftarKelasTerurut() {
+            return [...new Set((STATE.siswa || []).map(s => String(s.kelas || '').trim()).filter(Boolean))]
+                .sort((a, b) => a.localeCompare(b, 'id', { numeric: true, sensitivity: 'base' }));
+        }
+
+        function buildOptgroupKelasHTML(daftarKelas, prioritasTingkatList) {
+            const groups = { X: [], XI: [], XII: [], LAINNYA: [] };
+            daftarKelas.forEach(k => groups[getTingkatKelas(k)].push(k));
+
+            const labelMap = {
+                X: 'Kelas X',
+                XI: 'Kelas XI',
+                XII: 'Kelas XII',
+                LAINNYA: 'Kelas Lainnya'
+            };
+
+            const urutan = [...prioritasTingkatList, 'X', 'XI', 'XII', 'LAINNYA']
+                .filter((v, idx, arr) => arr.indexOf(v) === idx);
+
+            return urutan
+                .filter(g => groups[g].length > 0)
+                .map(g => `<optgroup label="${labelMap[g]}">` +
+                    groups[g].map(k => `<option value="${escapeHTML(k)}">Kelas ${escapeHTML(k)}</option>`).join('') +
+                    `</optgroup>`)
+                .join('');
+        }
+
+        function hitungStatistikSatuKelas(namaKelas, absensiSource) {
+            const siswaKelas = (STATE.siswa || []).filter(s => String(s.kelas || '').trim() === namaKelas);
+            const totalSiswa = siswaKelas.length;
+            const absenKelas = (absensiSource || []).filter(a => String(a.kelas || '').trim() === namaKelas);
+
+            let h = 0, t = 0, i = 0, s = 0, a = 0;
+            const tercatatSet = new Set();
+            absenKelas.forEach(r => {
+                const st = String(r.status || '').trim().toUpperCase();
+                if (st === 'H') h++;
+                else if (st === 'T') t++;
+                else if (st === 'I') i++;
+                else if (st === 'S') s++;
+                else if (st === 'A') a++;
+                if (r.nis) tercatatSet.add(String(r.nis).trim().toUpperCase());
+            });
+
+            const belumAbsen = Math.max(0, totalSiswa - tercatatSet.size);
+            const hadirEfektif = h + t;
+            const rasio = totalSiswa > 0 ? Math.min(100, Math.round((hadirEfektif / totalSiswa) * 100)) : 0;
+
+            return { kelas: namaKelas, totalSiswa, h, t, i, s, a, belumAbsen, hadirEfektif, rasio };
+        }
+
+        function buildKelasStatCardHTML(st, borderAccentColor) {
+            const badgeClass = st.rasio >= 85
+                ? 'bg-success'
+                : (st.rasio >= 70 ? 'bg-warning text-dark' : 'bg-danger');
+            const barClass = st.rasio >= 85
+                ? 'bg-success'
+                : (st.rasio >= 70 ? 'bg-warning' : 'bg-danger');
+            const borderStyle = borderAccentColor ? `style="border-left-color: ${borderAccentColor};"` : '';
+
+            return `
+                <div class="col-12 col-md-6">
+                    <div class="kelas-stat-card" ${borderStyle}>
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                            <div class="fw-bold text-dark fs-6">
+                                <i class="fas fa-chalkboard-user text-primary me-2"></i>Kelas ${escapeHTML(st.kelas)}
+                            </div>
+                            <span class="kelas-stat-badge-jml">Jumlah: ${st.totalSiswa} Siswa</span>
+                        </div>
+
+                        <div class="kelas-stat-grid">
+                            <div>
+                                <div class="kelas-stat-num text-success">${st.h}</div>
+                                <div class="kelas-stat-lbl">Hadir</div>
+                            </div>
+                            <div>
+                                <div class="kelas-stat-num text-orange">${st.t}</div>
+                                <div class="kelas-stat-lbl">Telat</div>
+                            </div>
+                            <div>
+                                <div class="kelas-stat-num text-primary">${st.i}</div>
+                                <div class="kelas-stat-lbl">Ijin</div>
+                            </div>
+                            <div>
+                                <div class="kelas-stat-num text-purple">${st.s}</div>
+                                <div class="kelas-stat-lbl">Sakit</div>
+                            </div>
+                            <div>
+                                <div class="kelas-stat-num text-danger">${st.a}</div>
+                                <div class="kelas-stat-lbl">Alpa</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center small mb-1">
+                            <span class="text-muted fw-semibold">
+                                Rasio Kehadiran:${st.belumAbsen > 0 ? ` <span class="text-danger fw-normal">(Belum absen: ${st.belumAbsen})</span>` : ''}
+                            </span>
+                            <span class="badge ${badgeClass} px-2">${st.rasio}%</span>
+                        </div>
+                        <div class="kelas-stat-progress">
+                            <div class="progress-bar ${barClass}" role="progressbar" style="width: ${st.rasio}%; height: 100%;"></div>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        function onDashStatSlotChange(posisi) {
+            if (posisi === 'kiri') {
+                STATE.dashSlotKiriKelas = document.getElementById('dash-slot-kiri-select').value;
+            } else {
+                STATE.dashSlotKananKelas = document.getElementById('dash-slot-kanan-select').value;
+            }
+            renderStatistikKelasDashboard();
+        }
+
+        function renderStatistikKelasDashboard() {
             const grid = document.getElementById('dash-stat-kelas-grid');
             const labelTgl = document.getElementById('dash-stat-kelas-tgl');
-            if (!grid) return;
+            const selKiri = document.getElementById('dash-slot-kiri-select');
+            const selKanan = document.getElementById('dash-slot-kanan-select');
+            if (!grid || !selKiri || !selKanan) return;
 
-            const filterKls = document.getElementById('dash-filter-kelas').value;
             const tgl = document.getElementById('dash-filter-tanggal').value;
             if (labelTgl) labelTgl.innerText = formatTanggalIndo(tgl) || tgl;
 
-            // Kelompokkan siswa berdasarkan kelas (urut alami: X-1, X-2, ..., X-10)
-            const kelasSet = new Set(
-                (STATE.siswa || [])
-                    .map(s => String(s.kelas || '').trim())
-                    .filter(Boolean)
-            );
-            let daftarKelas = [...kelasSet].sort((a, b) =>
-                a.localeCompare(b, 'id', { numeric: true, sensitivity: 'base' })
-            );
-
-            if (filterKls) {
-                daftarKelas = daftarKelas.filter(k => k === filterKls);
-            }
-
+            const daftarKelas = getDaftarKelasTerurut();
             if (daftarKelas.length === 0) {
+                selKiri.innerHTML = '<option value="">Belum ada kelas</option>';
+                selKanan.innerHTML = '<option value="">Belum ada kelas</option>';
                 grid.innerHTML = '<div class="col-12 text-center text-muted py-3 small">Belum ada data kelas yang terdaftar.</div>';
                 return;
             }
 
-            grid.innerHTML = daftarKelas.map(kls => {
-                const siswaKelas = (STATE.siswa || []).filter(s => String(s.kelas || '').trim() === kls);
-                const totalSiswa = siswaKelas.length;
+            // Isi dropdown kiri (prioritas Kelas X) & kanan (prioritas Kelas XI / XII)
+            selKiri.innerHTML = buildOptgroupKelasHTML(daftarKelas, ['X', 'XI', 'XII']);
+            selKanan.innerHTML = buildOptgroupKelasHTML(daftarKelas, ['XI', 'XII', 'X']);
 
-                const absenKelas = (STATE.absensiHariIni || []).filter(a => String(a.kelas || '').trim() === kls);
-                let h = 0, t = 0, i = 0, s = 0, a = 0;
-                absenKelas.forEach(r => {
-                    const st = String(r.status || '').trim().toUpperCase();
-                    if (st === 'H') h++;
-                    else if (st === 'T') t++;
-                    else if (st === 'I') i++;
-                    else if (st === 'S') s++;
-                    else if (st === 'A') a++;
+            // Tentukan default pilihan Kartu Kiri: utamakan Kelas X
+            if (!STATE.dashSlotKiriKelas || !daftarKelas.includes(STATE.dashSlotKiriKelas)) {
+                const defaultX = daftarKelas.find(k => getTingkatKelas(k) === 'X');
+                STATE.dashSlotKiriKelas = defaultX || daftarKelas[0];
+            }
+
+            // Tentukan default pilihan Kartu Kanan: utamakan Kelas XI / XII, fallback ke kelas berbeda
+            if (!STATE.dashSlotKananKelas || !daftarKelas.includes(STATE.dashSlotKananKelas)) {
+                const defaultXIXII = daftarKelas.find(k => {
+                    const tg = getTingkatKelas(k);
+                    return tg === 'XI' || tg === 'XII';
                 });
+                const kelasLain = daftarKelas.find(k => k !== STATE.dashSlotKiriKelas);
+                STATE.dashSlotKananKelas = defaultXIXII || kelasLain || daftarKelas[0];
+            }
 
-                const hadirEfektif = h + t;
-                const rasio = totalSiswa > 0
-                    ? Math.min(100, Math.round((hadirEfektif / totalSiswa) * 100))
-                    : 0;
+            selKiri.value = STATE.dashSlotKiriKelas;
+            selKanan.value = STATE.dashSlotKananKelas;
 
-                const badgeClass = rasio >= 85
-                    ? 'bg-success'
-                    : (rasio >= 70 ? 'bg-warning text-dark' : 'bg-danger');
-                const barClass = rasio >= 85
-                    ? 'bg-success'
-                    : (rasio >= 70 ? 'bg-warning' : 'bg-danger');
+            const stKiri = hitungStatistikSatuKelas(STATE.dashSlotKiriKelas, STATE.absensiHariIni);
+            const stKanan = hitungStatistikSatuKelas(STATE.dashSlotKananKelas, STATE.absensiHariIni);
 
-                return `
-                    <div class="col-12 col-md-6">
-                        <div class="kelas-stat-card">
-                            <div class="d-flex justify-content-between align-items-center gap-2">
-                                <div class="fw-bold text-dark fs-6">
-                                    <i class="fas fa-chalkboard-user text-primary me-2"></i>Kelas ${escapeHTML(kls)}
-                                </div>
-                                <span class="kelas-stat-badge-jml">Jumlah: ${totalSiswa} Siswa</span>
-                            </div>
+            if (daftarKelas.length === 1) {
+                grid.innerHTML = buildKelasStatCardHTML(stKiri, '#0d6efd');
+            } else {
+                grid.innerHTML =
+                    buildKelasStatCardHTML(stKiri, '#0d6efd') +
+                    buildKelasStatCardHTML(stKanan, '#0891b2');
+            }
+        }
 
-                            <div class="kelas-stat-grid">
-                                <div>
-                                    <div class="kelas-stat-num text-success">${h}</div>
-                                    <div class="kelas-stat-lbl">Hadir</div>
-                                </div>
-                                <div>
-                                    <div class="kelas-stat-num text-orange">${t}</div>
-                                    <div class="kelas-stat-lbl">Telat</div>
-                                </div>
-                                <div>
-                                    <div class="kelas-stat-num text-primary">${i}</div>
-                                    <div class="kelas-stat-lbl">Ijin</div>
-                                </div>
-                                <div>
-                                    <div class="kelas-stat-num text-purple">${s}</div>
-                                    <div class="kelas-stat-lbl">Sakit</div>
-                                </div>
-                                <div>
-                                    <div class="kelas-stat-num text-danger">${a}</div>
-                                    <div class="kelas-stat-lbl">Alpa</div>
-                                </div>
-                            </div>
+        // =========================================================================
+        // 4C. MENU KHUSUS STATISTIK KEHADIRAN SELURUH KELAS
+        // =========================================================================
+        function initStatistikPage() {
+            const tglEl = document.getElementById('stat-filter-tanggal');
+            const dashTgl = document.getElementById('dash-filter-tanggal') ? document.getElementById('dash-filter-tanggal').value : '';
+            if (tglEl && !tglEl.value) {
+                tglEl.value = dashTgl || getTodayStr();
+            }
+            loadStatistikPageData();
+        }
 
-                            <div class="d-flex justify-content-between align-items-center small mb-1">
-                                <span class="text-muted fw-semibold">Rasio Kehadiran:</span>
-                                <span class="badge ${badgeClass} px-2">${rasio}%</span>
-                            </div>
-                            <div class="kelas-stat-progress">
-                                <div class="progress-bar ${barClass}" role="progressbar" style="width: ${rasio}%; height: 100%;"></div>
-                            </div>
-                        </div>
-                    </div>`;
+        function loadStatistikPageData() {
+            const tglEl = document.getElementById('stat-filter-tanggal');
+            if (!tglEl.value) tglEl.value = getTodayStr();
+            const tgl = tglEl.value;
+
+            callBackend('getInitialData_server', [tgl], (res) => {
+                STATE.siswa = res.siswa || [];
+                STATE.statAbsensi = res.absensi || [];
+                STATE.statTanggal = tgl;
+                STATE.pengaturan = res.pengaturan || STATE.pengaturan;
+                populateAllClassDropdowns();
+                renderStatistikSemuaKelasUI();
+            }, "Memuat Statistik Seluruh Kelas...");
+        }
+
+        function getFilteredStatistikKelasList() {
+            const tingkat = document.getElementById('stat-filter-tingkat').value;
+            const keyword = (document.getElementById('stat-search-kelas').value || '').trim().toLowerCase();
+
+            let daftarKelas = getDaftarKelasTerurut();
+            if (tingkat) {
+                daftarKelas = daftarKelas.filter(k => getTingkatKelas(k) === tingkat);
+            }
+            if (keyword) {
+                daftarKelas = daftarKelas.filter(k => k.toLowerCase().includes(keyword));
+            }
+            return daftarKelas.map(k => hitungStatistikSatuKelas(k, STATE.statAbsensi));
+        }
+
+        function renderStatistikSemuaKelasUI() {
+            const grid = document.getElementById('stat-all-kelas-grid');
+            const labelTgl = document.getElementById('stat-all-label-tgl');
+            if (!grid) return;
+
+            if (labelTgl) labelTgl.innerText = formatTanggalIndo(STATE.statTanggal || getTodayStr());
+
+            const statsList = getFilteredStatistikKelasList();
+            const totalSiswaAll = statsList.reduce((acc, x) => acc + x.totalSiswa, 0);
+            const totalHadirAll = statsList.reduce((acc, x) => acc + x.hadirEfektif, 0);
+            const avgRasio = totalSiswaAll > 0 ? Math.round((totalHadirAll / totalSiswaAll) * 100) : 0;
+
+            document.getElementById('stat-sum-kelas').innerText = statsList.length;
+            document.getElementById('stat-sum-siswa').innerText = totalSiswaAll;
+            document.getElementById('stat-sum-hadir').innerText = totalHadirAll;
+            document.getElementById('stat-sum-rasio').innerText = `${avgRasio}%`;
+
+            if (statsList.length === 0) {
+                grid.innerHTML = '<div class="col-12 text-center text-muted py-4">Tidak ada kelas yang sesuai dengan filter tingkat/pencarian ini.</div>';
+                return;
+            }
+
+            grid.innerHTML = statsList.map(st => {
+                const tg = getTingkatKelas(st.kelas);
+                const warna = tg === 'XII' ? '#6f42c1' : (tg === 'XI' ? '#0891b2' : '#0d6efd');
+                return buildKelasStatCardHTML(st, warna);
             }).join('');
+        }
+
+        function cetakStatistikSemuaKelasPDF() {
+            const statsList = getFilteredStatistikKelasList();
+            if (statsList.length === 0) {
+                return customAlert("Tidak ada data statistik kelas untuk dicetak.");
+            }
+
+            const tgl = STATE.statTanggal || getTodayStr();
+            const tingkat = document.getElementById('stat-filter-tingkat').value;
+            const labelTingkat = tingkat ? `Tingkat Kelas ${tingkat}` : 'Semua Tingkat (X, XI, XII)';
+            const todayIndo = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+            const tot = statsList.reduce((acc, r) => {
+                acc.totalSiswa += r.totalSiswa;
+                acc.h += r.h; acc.t += r.t; acc.i += r.i; acc.s += r.s; acc.a += r.a;
+                acc.belumAbsen += r.belumAbsen;
+                acc.hadirEfektif += r.hadirEfektif;
+                return acc;
+            }, { totalSiswa: 0, h: 0, t: 0, i: 0, s: 0, a: 0, belumAbsen: 0, hadirEfektif: 0 });
+            const totRasio = tot.totalSiswa > 0 ? Math.round((tot.hadirEfektif / tot.totalSiswa) * 100) : 0;
+
+            const rowsHtml = statsList.map((r, idx) => `
+                <tr>
+                    <td style="padding:5px;">${idx + 1}</td>
+                    <td style="padding:5px; font-weight:bold;">Kelas ${escapeHTML(r.kelas)}</td>
+                    <td style="padding:5px;">${r.totalSiswa}</td>
+                    <td style="padding:5px;">${r.h}</td>
+                    <td style="padding:5px;">${r.t}</td>
+                    <td style="padding:5px;">${r.i}</td>
+                    <td style="padding:5px;">${r.s}</td>
+                    <td style="padding:5px;">${r.a}</td>
+                    <td style="padding:5px;">${r.belumAbsen}</td>
+                    <td style="padding:5px; font-weight:bold;">${r.rasio}%</td>
+                </tr>`).join('') + `
+                <tr style="background:#f3f3f3; font-weight:bold;">
+                    <td colspan="2" style="padding:6px;">TOTAL (${statsList.length} Kelas)</td>
+                    <td style="padding:6px;">${tot.totalSiswa}</td>
+                    <td style="padding:6px;">${tot.h}</td>
+                    <td style="padding:6px;">${tot.t}</td>
+                    <td style="padding:6px;">${tot.i}</td>
+                    <td style="padding:6px;">${tot.s}</td>
+                    <td style="padding:6px;">${tot.a}</td>
+                    <td style="padding:6px;">${tot.belumAbsen}</td>
+                    <td style="padding:6px;">${totRasio}%</td>
+                </tr>`;
+
+            const container = document.getElementById('print-container-global');
+            container.innerHTML = `
+                <div style="font-family: 'Times New Roman', serif; color:#000;">
+                    <div style="text-align:center; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 14px;">
+                        <h3 style="margin:0; font-weight:bold;">${escapeHTML((STATE.pengaturan.nama_sekolah || 'SEKOLAH').toUpperCase())}</h3>
+                        <h4 style="margin:4px 0 0 0;">LAPORAN STATISTIK KEHADIRAN PER KELAS</h4>
+                        <div style="font-size:13px; margin-top:4px;">Tanggal: ${escapeHTML(formatTanggalIndo(tgl))} | ${escapeHTML(labelTingkat)}</div>
+                    </div>
+                    <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;" border="1">
+                        <thead>
+                            <tr style="background:#eee;">
+                                <th style="padding:6px;">No</th>
+                                <th style="padding:6px;">Kelas</th>
+                                <th style="padding:6px;">Jml Siswa</th>
+                                <th style="padding:6px;">Hadir</th>
+                                <th style="padding:6px;">Telat</th>
+                                <th style="padding:6px;">Ijin</th>
+                                <th style="padding:6px;">Sakit</th>
+                                <th style="padding:6px;">Alpa</th>
+                                <th style="padding:6px;">Belum Absen</th>
+                                <th style="padding:6px;">Rasio Hadir</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                    <div style="width: 250px; float:right; text-align:center; margin-top: 28px; font-size: 13px;">
+                        ${todayIndo}<br>Wakil Kepala Sekolah Bidang Kurikulum<br><br><br><br>
+                        <strong>${escapeHTML(STATE.user ? STATE.user.nama : '__________________')}</strong>
+                    </div>
+                </div>`;
+            setTimeout(() => { window.print(); }, 250);
         }
 		
 
