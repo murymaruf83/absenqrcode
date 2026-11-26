@@ -276,7 +276,11 @@
         }
 
         /* Print Container (Laporan & Kartu QR Massal) */
-        #print-container-global {
+        #print-container-global { display: none; }
+        @media print {
+            body { padding: 0 !important; margin: 0 !important; background: #fff !important; }
+            #main-app, #page-login, #loader, .modal, .modal-backdrop, .modal-custom-overlay { display: none !important; }
+            #print-container-global {
                 display: block !important;
                 width: 100%;
                 -webkit-print-color-adjust: exact !important;
@@ -310,6 +314,52 @@
             #print-container-global table[border="1"] td:nth-child(2) {
                 white-space: nowrap;
             }
+            .qr-card-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 12px;
+            }
+            .qr-id-card {
+                border: 2px solid #0d6efd;
+                border-radius: 8px;
+                padding: 10px;
+                text-align: center;
+                page-break-inside: avoid;
+                background: #fff;
+            }
+            .blanko-izin-sheet {
+                width: 100%;
+                max-width: 190mm;
+                margin: 0 auto;
+                page-break-inside: avoid;
+                font-family: 'Times New Roman', Times, serif;
+                color: #000;
+            }
+            .blanko-izin-box {
+                border: 1.8px solid #000;
+                padding: 10px 14px;
+                background: #fff;
+            }
+            .blanko-cut-line {
+                margin: 16px 0;
+                border-top: 1.5px dashed #333;
+                text-align: center;
+                font-size: 9.5px;
+                color: #333;
+                padding-top: 4px;
+            }
+            .blanko-arsip-tag {
+                display: inline-block;
+                border: 1.2px solid #000;
+                padding: 1px 8px;
+                font-size: 9.5px;
+                font-weight: bold;
+                letter-spacing: 0.4px;
+                margin-bottom: 4px;
+                background: #f2f2f2;
+            }
+        }
+		
 		/* Navigasi Tab Profesional Halaman Rekap (Terpisah dari Sidebar .nav-item) */
         .rekap-tab-bar {
             display: flex;
@@ -1294,7 +1344,7 @@
                             </nav>
                         </div>
                     </div> <!-- Penutup #panel-rekap-waktu harus di bawah footer ini -->
-                    </div>
+                   
 
                     <!-- TAB 2: REKAP JUMLAH H.T.I.S.A PER SISWA (PAGINASI 20 SISWA / HALAMAN) -->
                     <div id="panel-rekap-siswa" class="hidden">
@@ -1401,6 +1451,7 @@
                         </div>
                     </div>
             </div>
+			</div>
             
 			<!-- ================================================================= -->
             <!-- 4B. VIEW RAPOR ABSENSI INDIVIDU                                   -->
@@ -2844,9 +2895,10 @@
             };
             document.getElementById('app-title').innerText = titles[page] || "Dashboard";
 
-            if (page === 'dashboard') loadDashboardData();
+           if (page === 'dashboard') loadDashboardData();
             if (page === 'scan') initScanPage();
             if (page === 'siswa') loadSiswaData();
+            if (page === 'rekap') initRekapPage();
             if (page === 'rapor') initRaporPage();
             if (page === 'statistik') initStatistikPage();
             if (page === 'pengaturan') loadPengaturanDanUsers();
