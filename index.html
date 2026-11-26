@@ -294,6 +294,27 @@
                 page-break-inside: avoid;
                 background: #fff;
             }
+			.blanko-izin-sheet {
+                width: 100%;
+                max-width: 190mm;
+                margin: 0 auto;
+                page-break-inside: avoid;
+                font-family: 'Times New Roman', Times, serif;
+                color: #000;
+            }
+            .blanko-izin-box {
+                border: 1.8px solid #000;
+                padding: 10px 14px;
+                background: #fff;
+            }
+            .blanko-cut-line {
+                margin-top: 10px;
+                border-top: 1px dashed #444;
+                text-align: center;
+                font-size: 9.5px;
+                color: #444;
+                padding-top: 3px;
+            }
         }
 		/* Navigasi Tab Profesional Halaman Rekap (Terpisah dari Sidebar .nav-item) */
         .rekap-tab-bar {
@@ -627,10 +648,11 @@
                                     <th>Jam Masuk</th>
                                     <th>Jam Keluar</th>
                                     <th class="text-start">Keterangan / Alasan</th>
+                                    <th width="10%">Blanko</th>
                                 </tr>
                             </thead>
                             <tbody id="tbody-dash-tidak-hadir">
-                                <tr><td colspan="9" class="text-muted py-3">Memuat data...</td></tr>
+                                <tr><td colspan="10" class="text-muted py-3">Memuat data...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -899,6 +921,12 @@
                                                 <td class="fs-6" id="res-jam-detail">-</td>
                                             </tr>
                                         </table>
+										<div id="res-action-blanko" class="mt-3 text-end hidden">
+                                            <button type="button" class="btn btn-sm btn-danger fw-bold px-3 shadow-sm" onclick="cetakBlankoIjinPulangAktif()">
+                                                <i class="fas fa-print me-1"></i> Cetak Blanko Izin Pulang (Half-A4)
+                                            </button>
+                                        </div>
+                                    
                                     </div>
                                 </div>
                             </div>
@@ -2810,7 +2838,7 @@
 
             const totalItems = tidakHadir.length;
             if (totalItems === 0) {
-                tbTH.innerHTML = '<tr><td colspan="9" class="text-muted py-3">Tidak ada siswa berstatus Ijin, Sakit, atau Alpa pada tanggal ini.</td></tr>';
+                tbTH.innerHTML = '<tr><td colspan="10" class="text-muted py-3">Tidak ada siswa berstatus Ijin, Sakit, atau Alpa pada tanggal ini.</td></tr>';
                 if (infoEl) infoEl.innerText = 'Menampilkan 0 siswa';
                 if (pagEl) pagEl.innerHTML = '';
                 return;
@@ -3513,7 +3541,8 @@
                     jamScan: getCurrentTimeStr(),
                     siswa: { nis: '-', nama: 'Tidak Dikenal', jenis_kelamin: '-', kelas: '-' },
                     record: null
-                });
+                
+				});
                 return;
             }
 
@@ -3676,19 +3705,21 @@
                     STATE.isProcessingScan = false;
 
                     if (res && res.success) {
-                        playBeep('warning');
-                        renderDisplayPanel({
-                            stateClass: 'state-warning',
-                            badgeClass: 'bg-warning text-dark',
-                            badgeText: 'IZIN KELUAR SEMENTARA',
-                            bannerClass: 'alert-warning',
-                            message: `Keluar sementara dicatat (${alasan}). Scan ulang QR saat siswa kembali ke sekolah.`,
-                            jamScan: res.jamScan || getCurrentTimeStr(),
-                            siswa: res.siswa,
-                            record: res.record
-                        });
-                        refreshRecentScanSilent();
-                    } else {
+                    playBeep('success');
+                    LAST_IJIN_PULANG_REC = res.record || null;
+                    renderDisplayPanel({
+                        stateClass: 'state-ijin',
+                        badgeClass: 'bg-primary',
+                        badgeText: 'IJIN PULANG AWAL (I)',
+                        bannerClass: 'alert-primary',
+                        message: `Status otomatis berubah menjadi IJIN. Alasan: ${alasan}`,
+                        jamScan: res.jamScan || getCurrentTimeStr(),
+                        siswa: res.siswa,
+                        record: res.record,
+                        showBlankoBtn: true
+                    });
+                    refreshRecentScanSilent();
+                } else {
                         customAlert(res && res.message ? res.message : "Gagal mencatat izin keluar sementara.");
                     }
                     const usbInput = document.getElementById('input-usb-qr');
@@ -3900,7 +3931,7 @@
             });
         }
 
-        function renderDisplayPanel({ stateClass, badgeClass, badgeText, bannerClass, message, jamScan, siswa, record }) {
+        function renderDisplayPanel({ stateClass, badgeClass, badgeText, bannerClass, message, jamScan, siswa, record, showBlankoBtn = false }) {
             const card = document.getElementById('scan-display-card');
             card.className = `scan-display-card p-4 shadow-sm h-100 ${stateClass}`;
 
@@ -3926,7 +3957,19 @@
             const jamMasuk = record && record.jam_masuk ? record.jam_masuk : '-';
             const jamPulang = record && record.jam_pulang ? record.jam_pulang : 'Belum Pulang';
             document.getElementById('res-jam-detail').innerHTML = `<span class="text-success">Masuk: ${escapeHTML(jamMasuk)}</span> &nbsp;|&nbsp; <span class="text-primary">Pulang: ${escapeHTML(jamPulang)}</span>`;
+            
+			const blankoWrap = document.getElementById('res-action-blanko');
+            if (blankoWrap) {
+                const bolehCetak = showBlankoBtn || (record && record.status_pulang === 'Ijin Pulang Awal');
+                if (bolehCetak && record) {
+                    LAST_IJIN_PULANG_REC = record;
+                    blankoWrap.classList.remove('hidden');
+                } else {
+                    blankoWrap.classList.add('hidden');
+                }
+            }
         }
+		}
 
         function refreshRecentScanSilent() {
             callBackend('getInitialData_server', [getTodayStr()], (res) => {
@@ -5408,6 +5451,112 @@
                         <strong>${escapeHTML(STATE.user ? STATE.user.nama : '__________________')}</strong>
                     </div>
                 </div>`;
+            setTimeout(() => { window.print(); }, 250);
+        }
+		 
+		 let LAST_IJIN_PULANG_REC = null;
+
+        function cetakBlankoIjinPulangAktif() {
+            if (!LAST_IJIN_PULANG_REC) {
+                return customAlert("Data izin pulang tidak ditemukan. Silakan cetak melalui tabel Dashboard.");
+            }
+            cetakBlankoIjinPulang(LAST_IJIN_PULANG_REC);
+        }
+
+        function cetakBlankoIjinPulangById(idAbsen) {
+            const rec = (STATE.absensiHariIni || []).find(a => String(a.id_absen || '').trim() === String(idAbsen || '').trim());
+            if (!rec) {
+                return customAlert("Data presensi izin pulang tidak ditemukan pada tanggal ini.");
+            }
+            cetakBlankoIjinPulang(rec);
+        }
+
+        function cetakBlankoIjinPulang(rec) {
+            const namaSekolah = (STATE.pengaturan && STATE.pengaturan.nama_sekolah)
+                ? STATE.pengaturan.nama_sekolah.toUpperCase()
+                : 'SEKOLAH';
+
+            const dObj = rec.tanggal ? new Date(rec.tanggal + 'T00:00:00') : new Date();
+            const hariTanggal = !isNaN(dObj.getTime())
+                ? dObj.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+                : (rec.tanggal || '-');
+
+            const jkLengkap = rec.jenis_kelamin === 'L'
+                ? 'Laki-laki'
+                : (rec.jenis_kelamin === 'P' ? 'Perempuan' : (rec.jenis_kelamin || '-'));
+
+            const alasanBersih = String(rec.keterangan || '-')
+                .replace(/^Ijin Pulang:\s*/i, '')
+                .trim() || '-';
+
+            const container = document.getElementById('print-container-global');
+            container.innerHTML = `
+                <div class="blanko-izin-sheet">
+                    <div class="blanko-izin-box">
+                        <div style="text-align:center; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 8px;">
+                            <div style="font-size: 13px; font-weight: bold; letter-spacing: 0.5px;">${escapeHTML(namaSekolah)}</div>
+                            <div style="font-size: 12px; font-weight: bold; margin-top: 2px; text-decoration: underline;">SURAT IZIN PULANG (MENINGGALKAN SEKOLAH)</div>
+                            <div style="font-size: 10px; margin-top: 2px;">Nomor: ${escapeHTML(rec.id_absen || '-')}</div>
+                        </div>
+
+                        <table style="width:100%; font-size: 11.5px; border-collapse: collapse; margin-bottom: 6px;">
+                            <tr>
+                                <td style="width: 15%; padding: 2px 0;">Nama Siswa</td>
+                                <td style="width: 2%;">:</td>
+                                <td style="width: 38%; font-weight: bold;">${escapeHTML(String(rec.nama || '-').toUpperCase())}</td>
+                                <td style="width: 15%; padding: 2px 0;">Hari / Tanggal</td>
+                                <td style="width: 2%;">:</td>
+                                <td style="width: 28%;">${escapeHTML(hariTanggal)}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 2px 0;">NIS</td>
+                                <td>:</td>
+                                <td>${escapeHTML(rec.nis || '-')}</td>
+                                <td style="padding: 2px 0;">Jam Masuk</td>
+                                <td>:</td>
+                                <td>${escapeHTML(rec.jam_masuk || '-')} WIB</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 2px 0;">Kelas / L-P</td>
+                                <td>:</td>
+                                <td><strong>${escapeHTML(rec.kelas || '-')}</strong> (${escapeHTML(jkLengkap)})</td>
+                                <td style="padding: 2px 0;">Jam Keluar</td>
+                                <td>:</td>
+                                <td><strong>${escapeHTML(rec.jam_pulang || '-')} WIB</strong></td>
+                            </tr>
+                        </table>
+
+                        <div style="border: 1px solid #000; padding: 5px 8px; font-size: 11.5px; margin-bottom: 6px; background: #fafafa;">
+                            <strong>Alasan / Keperluan Izin Pulang:</strong> ${escapeHTML(alasanBersih)}
+                        </div>
+
+                        <div style="font-size: 10px; font-style: italic; margin-bottom: 10px;">
+                            * Blanko ini wajib ditandatangani Wali Kelas &amp; Guru Piket, lalu diserahkan kepada Petugas Keamanan (Satpam) di Gerbang Sekolah saat pulang.
+                        </div>
+
+                        <table style="width:100%; font-size: 11.5px; text-align: center; border-collapse: collapse;">
+                            <tr>
+                                <td style="width: 50%; vertical-align: top;">
+                                    Mengetahui,<br>
+                                    <strong>Wali Kelas ${escapeHTML(rec.kelas || '')}</strong>
+                                    <div style="height: 46px;"></div>
+                                    ( ............................................. )
+                                </td>
+                                <td style="width: 50%; vertical-align: top;">
+                                    Disetujui oleh,<br>
+                                    <strong>Guru Piket</strong>
+                                    <div style="height: 46px;"></div>
+                                    ( ............................................. )
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="blanko-cut-line">
+                        &#9986; Potong di garis ini &mdash; sisa setengah kertas A4 dapat digunakan kembali untuk cetakan berikutnya &#9986;
+                    </div>
+                </div>`;
+
             setTimeout(() => { window.print(); }, 250);
         }
 		 
