@@ -5919,7 +5919,7 @@
             const cA = list.filter(r => String(r.status || '').trim().toUpperCase() === 'A').length;
 
             const subjudul = `Tanggal: ${formatTanggalIndo(tgl)} | Kelas: ${kls || 'Semua Kelas'} | Ringkasan: T=${cT}, I=${cI}, S=${cS}, A=${cA} (Total ${list.length} Siswa)`;
-            cetakTabelHTML("LAPORAN HARIAN SISWA TERLAMBAT, IJIN, SAKIT & ALPA", subjudul, list);
+            cetakTabelHTML("LAPORAN HARIAN SISWA TERLAMBAT, IJIN, SAKIT & ALPA", subjudul, list, true);
         }
 
         function cetakRekapPDF() {
@@ -6040,56 +6040,7 @@
             setTimeout(() => { window.print(); }, 250);
         }
 
-        function cetakTabelHTML(judul, subjudul, dataList) {
-            const todayIndo = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-            const rowsHtml = dataList.length === 0
-                ? '<tr><td colspan="10" style="padding:12px;">Belum ada data presensi.</td></tr>'
-                : dataList.map((r, i) => `
-                    <tr>
-                        <td>${i + 1}</td>
-                        <td>${escapeHTML(r.tanggal)}</td>
-                        <td>${escapeHTML(r.nis)}</td>
-                        <td style="text-align:left;">${escapeHTML(r.nama)}</td>
-                        <td>${escapeHTML(r.jenis_kelamin)}</td>
-                        <td>${escapeHTML(r.kelas)}</td>
-                        <td>${escapeHTML(r.jam_masuk || '-')}</td>
-                        <td>${escapeHTML(r.jam_pulang || '-')}</td>
-                        <td><strong>${escapeHTML(r.status)}</strong></td>
-                        <td style="text-align:left;">${escapeHTML(r.keterangan || r.status_pulang || '-')}</td>
-                    </tr>`).join('');
-
-            const container = document.getElementById('print-container-global');
-            container.innerHTML = `
-                <div style="font-family: 'Times New Roman', serif; color:#000;">
-                    <div style="text-align:center; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 14px;">
-                        <h3 style="margin:0; font-weight:bold;">${escapeHTML(STATE.pengaturan.nama_sekolah.toUpperCase())}</h3>
-                        <h4 style="margin:4px 0 0 0;">${escapeHTML(judul)}</h4>
-                        <div style="font-size:13px; margin-top:4px;">${escapeHTML(subjudul)}</div>
-                    </div>
-                    <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;" border="1">
-                        <thead>
-                            <tr style="background:#eee;">
-                                <th style="padding:5px;">No</th>
-                                <th style="padding:5px;">Tanggal</th>
-                                <th style="padding:5px;">NIS</th>
-                                <th style="padding:5px; text-align:left;">Nama Siswa</th>
-                                <th style="padding:5px;">L/P</th>
-                                <th style="padding:5px;">Kelas</th>
-                                <th style="padding:5px;">Masuk</th>
-                                <th style="padding:5px;">Pulang</th>
-                                <th style="padding:5px;">Status</th>
-                                <th style="padding:5px; text-align:left;">Keterangan</th>
-                            </tr>
-                        </thead>
-                        <tbody>${rowsHtml}</tbody>
-                    </table>
-                    <div style="width: 240px; float:right; text-align:center; margin-top: 28px; font-size: 13px;">
-                        ${todayIndo}<br>Petugas Piket / Admin<br><br><br><br>
-                        <strong>${escapeHTML(STATE.user ? STATE.user.nama : '__________________')}</strong>
-                    </div>
-                </div>`;
-            setTimeout(() => { window.print(); }, 250);
-        }
+        function cetakTabelHTML(judul,
 		 
 		 let LAST_IJIN_PULANG_REC = null;
 
