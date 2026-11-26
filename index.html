@@ -696,9 +696,24 @@
                             <button type="button" class="btn btn-sm btn-outline-primary fw-bold px-3" onclick="navigate('statistik')">
                                 <i class="fas fa-th-large me-1"></i> Lihat Semua Kelas
                             </button>
-                            <button type="button" class="btn btn-sm btn-danger fw-bold px-3" onclick="cetakLaporanHarianPDF()">
-                                <i class="fas fa-print me-1"></i> Cetak PDF Harian
-                            </button>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-sm btn-danger fw-bold px-3 shadow-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-file-pdf me-1"></i> Cetak PDF Statistik
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                    <li>
+                                        <button type="button" class="dropdown-item small fw-semibold" onclick="cetakStatistikSemuaKelasPDF('dashboard-2kelas')">
+                                            <i class="fas fa-columns text-primary me-2"></i> 2 Kelas Terpilih (Kiri &amp; Kanan)
+                                        </button>
+                                    </li>
+                                    <li><hr class="dropdown-divider my-1"></li>
+                                    <li>
+                                        <button type="button" class="dropdown-item small fw-semibold" onclick="cetakStatistikSemuaKelasPDF('dashboard')">
+                                            <i class="fas fa-layer-group text-danger me-2"></i> Seluruh Kelas
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
 
@@ -3284,15 +3299,49 @@
             }).join('');
         }
 
-        function cetakStatistikSemuaKelasPDF() {
-            const statsList = getFilteredStatistikKelasList();
+        function cetakStatistikSemuaKelasPDF(sumber = 'statistik') {
+            const is2KelasDash = (sumber === 'dashboard-2kelas');
+            const isSemuaDash = (sumber === 'dashboard');
+            const isDariDashboard = is2KelasDash || isSemuaDash;
+
+            let statsList = [];
+            let labelTingkat = 'Semua Tingkat / Kelas';
+
+            if (is2KelasDash) {
+                const kKiri = document.getElementById('dash-slot-kiri-select')
+                    ? document.getElementById('dash-slot-kiri-select').value
+                    : STATE.dashSlotKiriKelas;
+                const kKanan = document.getElementById('dash-slot-kanan-select')
+                    ? document.getElementById('dash-slot-kanan-select').value
+                    : STATE.dashSlotKananKelas;
+
+                const kelasTerpilih = [...new Set([kKiri, kKanan].map(k => String(k || '').trim()).filter(Boolean))];
+                statsList = kelasTerpilih.map(k => hitungStatistikSatuKelas(k, STATE.absensiHariIni));
+                labelTingkat = kelasTerpilih.length > 1
+                    ? `Perbandingan: ${kelasTerpilih.map(k => formatLabelKelas(k)).join(' & ')}`
+                    : (kelasTerpilih.length === 1 ? `Khusus: ${formatLabelKelas(kelasTerpilih[0])}` : 'Kelas Terpilih');
+            } else if (isSemuaDash) {
+                statsList = getDaftarKelasTerurut().map(k => hitungStatistikSatuKelas(k, STATE.absensiHariIni));
+                labelTingkat = 'Semua Tingkat / Kelas';
+            } else {
+                statsList = getFilteredStatistikKelasList();
+                const tingkat = document.getElementById('stat-filter-tingkat')
+                    ? document.getElementById('stat-filter-tingkat').value
+                    : '';
+                labelTingkat = tingkat ? `Tingkat ${tingkat}` : 'Semua Tingkat / Kelas';
+            }
+
             if (statsList.length === 0) {
                 return customAlert("Tidak ada data statistik kelas untuk dicetak.");
             }
 
-            const tgl = STATE.statTanggal || getTodayStr();
-            const tingkat = document.getElementById('stat-filter-tingkat').value;
-            const labelTingkat = tingkat ? `Tingkat ${tingkat}` : 'Semua Tingkat / Kelas';
+            const tglDash = document.getElementById('dash-filter-tanggal')
+                ? document.getElementById('dash-filter-tanggal').value
+                : '';
+            const tgl = isDariDashboard
+                ? (tglDash || getTodayStr())
+                : (STATE.statTanggal || getTodayStr());
+
             const todayIndo = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
             const tot = statsList.reduce((acc, r) => {
