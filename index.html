@@ -733,7 +733,95 @@
             </div>
         </div>
     </div>
+    
+	<!-- ========================================================================= -->
+    <!-- HALAMAN PORTAL SISWA / ORANG TUA (PUBLIK - TANPA LOGIN)                   -->
+    <!-- ========================================================================= -->
+    <div id="page-portal-siswa" class="hidden py-4 px-3" style="min-height: 100vh; background: linear-gradient(135deg, #e8f1ff 0%, #f8f9fa 100%);">
+        <div class="container" style="max-width: 780px;">
+            <div class="card card-custom border-0 shadow-lg p-4 mb-3">
+                <div class="text-center mb-3 pb-3 border-bottom">
+                    <div class="text-primary mb-1"><i class="fas fa-user-graduate fa-2x"></i></div>
+                    <h4 class="fw-bold text-primary mb-0" id="portal-nama-sekolah">Portal Kehadiran Siswa</h4>
+                    <div class="small text-muted mt-1">Masukkan NIS / NISN putra-putri Anda untuk melihat rapor kehadiran.</div>
+                </div>
 
+                <form onsubmit="event.preventDefault(); cekRaporPortalSiswa();" class="row g-2 align-items-end">
+                    <div class="col-12 col-sm-5">
+                        <label for="portal-input-nis" class="form-label small fw-bold mb-1">NIS / NISN Siswa</label>
+                        <input type="text" id="portal-input-nis" class="form-control border-primary fw-bold" placeholder="Contoh: 0102610001" required autocomplete="off">
+                    </div>
+                    <div class="col-7 col-sm-4">
+                        <label for="portal-filter-periode" class="form-label small fw-bold mb-1">Periode</label>
+                        <select id="portal-filter-periode" class="form-select border-primary fw-semibold">
+                            <option value="Semester 1">Semester 1 (Jul - Des)</option>
+                            <option value="Semester 2">Semester 2 (Jan - Jun)</option>
+                            <option value="1 Tahun Penuh">1 Tahun Penuh</option>
+                        </select>
+                    </div>
+                    <div class="col-5 col-sm-3">
+                        <button type="submit" class="btn btn-primary w-100 fw-bold">
+                            <i class="fas fa-search me-1"></i> Cek Rapor
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Area Hasil Rapor Orang Tua -->
+            <div id="portal-result-card" class="card card-custom border border-primary shadow-sm p-4 hidden">
+                <h5 class="text-center fw-bold text-dark mb-3 pb-2 border-bottom">RAPOR KEHADIRAN SISWA</h5>
+
+                <table class="table table-borderless table-sm mb-3 align-middle">
+                    <tr><th style="width:130px;">NIS</th><td style="width:12px;">:</td><td class="fw-bold" id="portal-nis">-</td></tr>
+                    <tr><th>Nama Siswa</th><td>:</td><td class="fw-bold text-primary fs-5 text-uppercase" id="portal-nama">-</td></tr>
+                    <tr><th>L/P &amp; Kelas</th><td>:</td><td><span id="portal-jk" class="fw-semibold">-</span> &bull; <span class="badge bg-dark" id="portal-kelas">-</span></td></tr>
+                    <tr><th>Periode</th><td>:</td><td class="fw-bold" id="portal-periode-label">-</td></tr>
+                </table>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-4 col-md-2"><div class="stat-card bg-success py-2"><h4 class="fw-bold m-0" id="portal-h">0</h4><small>Hadir</small></div></div>
+                    <div class="col-4 col-md-2"><div class="stat-card bg-orange py-2"><h4 class="fw-bold m-0" id="portal-t">0</h4><small>Telat</small></div></div>
+                    <div class="col-4 col-md-2"><div class="stat-card bg-primary py-2"><h4 class="fw-bold m-0" id="portal-i">0</h4><small>Ijin</small></div></div>
+                    <div class="col-4 col-md-2"><div class="stat-card bg-purple py-2"><h4 class="fw-bold m-0" id="portal-s">0</h4><small>Sakit</small></div></div>
+                    <div class="col-4 col-md-2"><div class="stat-card bg-danger py-2"><h4 class="fw-bold m-0" id="portal-a">0</h4><small>Alpa</small></div></div>
+                    <div class="col-4 col-md-2"><div class="stat-card bg-dark py-2"><h4 class="fw-bold m-0 text-warning" id="portal-persen">0%</h4><small>Hadir</small></div></div>
+                </div>
+
+                <div class="bg-light border rounded p-2 px-3 mb-3">
+                    <div class="d-flex justify-content-between small fw-bold mb-1">
+                        <span>Persentase Kehadiran</span>
+                        <span id="portal-persen-detail">0%</span>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div id="portal-persen-bar" class="progress-bar bg-success" role="progressbar" style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <h6 class="fw-bold text-dark mb-2"><i class="fas fa-clipboard-list text-danger me-1"></i> Rincian Ketidakhadiran &amp; Izin</h6>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped table-sm align-middle text-center mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th width="6%">No</th>
+                                <th width="18%">Tanggal</th>
+                                <th width="22%">Status</th>
+                                <th width="22%">Waktu</th>
+                                <th class="text-start">Keterangan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-portal-rincian"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="text-center mt-3">
+                <a href="javascript:void(0)" onclick="window.location.href = window.location.origin + window.location.pathname;" class="small text-muted text-decoration-none">
+                    <i class="fas fa-lock me-1"></i> Masuk sebagai Admin / Petugas Sekolah
+                </a>
+            </div>
+        </div>
+    </div>
+	
     <!-- ========================================================================= -->
     <!-- APLIKASI UTAMA                                                            -->
     <!-- ========================================================================= -->
@@ -753,6 +841,9 @@
                 </button>
                 <button class="btn btn-sm btn-info text-white fw-bold" onclick="openModalUbahPassword()">
                     <i class="fas fa-key"></i> <span class="d-none d-md-inline">Ubah Password</span>
+                </button>
+				<button class="btn btn-sm btn-success fw-bold" onclick="salinLinkPortalSiswa()">
+                    <i class="fas fa-share-alt me-1"></i> <span class="d-none d-md-inline">Link Portal Siswa</span>
                 </button>
                 <button class="btn btn-sm btn-outline-light fw-bold" onclick="handleLogout()">
                     <i class="fas fa-sign-out-alt"></i> <span class="d-none d-md-inline">Keluar</span>
@@ -804,7 +895,25 @@
             <!-- ================================================================= -->
             <!-- 1. VIEW DASHBOARD                                                 -->
             <!-- ================================================================= -->
-            <div id="view-dashboard">
+            <div id="view-dashboard
+			<!-- Kartu Sapaan Pengguna & Tombol Salin Link Portal Orang Tua -->
+                <div class="card-custom border border-primary mb-3">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                        <div>
+                            <h4 class="fw-bold text-dark mb-1">
+                                Selamat Datang, <span id="dash-welcome-name" class="text-primary">Admin</span>!
+                            </h4>
+                            <p class="text-muted mb-0 small">
+                                Kelola daftar hadir siswa dengan sistematis dan profesional.
+                            </p>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <button type="button" class="btn btn-outline-success fw-bold px-3 shadow-sm" onclick="salinLinkPortalSiswa()">
+                                <i class="fas fa-copy me-1"></i> Salin Link Portal Siswa (Publik)
+                            </button>
+                        </div>
+                    </div>
+                </div>
                 <div class="row g-3 mb-3">
                     <div class="col-6">
                         <div class="stat-card bg-primary">
@@ -3317,6 +3426,8 @@
 
                     document.getElementById('page-login').classList.add('hidden');
                     document.getElementById('main-app').classList.remove('hidden');
+					const welcomeEl = document.getElementById('dash-welcome-name');
+                    if (welcomeEl) welcomeEl.innerText = STATE.user.nama || STATE.user.role || 'Admin';
                     navigate('dashboard');
                 } else {
                     customAlert(res && res.message ? res.message : "Login gagal! Periksa kembali Username dan Password.");
@@ -8212,11 +8323,126 @@
         }
 
         // =========================================================================
+        // 6. PORTAL SISWA / ORANG TUA (PUBLIK) & SALIN LINK
+        // =========================================================================
+        function salinLinkPortalSiswa() {
+            const urlPortal = window.location.origin + window.location.pathname + '?portal=siswa';
+            const onCopied = () => {
+                customAlert(
+                    "Link Portal Siswa (Publik) berhasil disalin!\n\n" +
+                    urlPortal + "\n\n" +
+                    "Silakan bagikan link ini ke grup WhatsApp Orang Tua / Wali Murid agar dapat mengecek rapor kehadiran anaknya cukup dengan memasukkan NIS."
+                );
+            };
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(urlPortal).then(onCopied).catch(() => {
+                    prompt("Salin link Portal Siswa berikut:", urlPortal);
+                });
+            } else {
+                prompt("Salin link Portal Siswa berikut:", urlPortal);
+            }
+        }
+
+        function initPortalSiswaMode() {
+            document.body.classList.add('kiosk-mode');
+            document.getElementById('page-login').classList.add('hidden');
+            document.getElementById('main-app').classList.add('hidden');
+            document.getElementById('page-portal-siswa').classList.remove('hidden');
+
+            callBackend('getPengaturan_server', [], (cfg) => {
+                if (cfg && cfg.nama_sekolah) {
+                    STATE.pengaturan = cfg;
+                    const el = document.getElementById('portal-nama-sekolah');
+                    if (el) el.innerText = `Portal Kehadiran — ${cfg.nama_sekolah}`;
+                }
+            }, false);
+
+            callBackend('getSiswa_server', [], (data) => {
+                STATE.siswa = data || [];
+            }, "Menyiapkan Portal Siswa...");
+        }
+
+        function cekRaporPortalSiswa() {
+            const nisInput = document.getElementById('portal-input-nis').value.trim().toUpperCase();
+            const periode = document.getElementById('portal-filter-periode').value;
+            if (!nisInput) return customAlert("Masukkan NIS / NISN siswa terlebih dahulu.");
+
+            const cariDanMuat = () => {
+                const siswa = (STATE.siswa || []).find(s => String(s.nis || '').trim().toUpperCase() === nisInput);
+                if (!siswa) {
+                    document.getElementById('portal-result-card').classList.add('hidden');
+                    return customAlert(`NIS / NISN "${nisInput}" tidak ditemukan.\nPastikan penulisan angka sudah benar.`);
+                }
+
+                callBackend('getRaporSiswa_server', [siswa.id_siswa, periode, ''], (res) => {
+                    if (!res || !res.success) {
+                        return customAlert(res && res.message ? res.message : "Gagal memuat rapor kehadiran.");
+                    }
+                    const s = res.siswa || siswa;
+                    const rk = res.ringkasan || {};
+                    const rincian = res.rincian || [];
+
+                    document.getElementById('portal-result-card').classList.remove('hidden');
+                    document.getElementById('portal-nis').innerText = s.nis || '-';
+                    document.getElementById('portal-nama').innerText = s.nama || '-';
+                    document.getElementById('portal-jk').innerText = s.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan';
+                    document.getElementById('portal-kelas').innerText = s.kelas || '-';
+                    document.getElementById('portal-periode-label').innerText = res.periode || periode;
+
+                    document.getElementById('portal-h').innerText = rk.h || 0;
+                    document.getElementById('portal-t').innerText = rk.t || 0;
+                    document.getElementById('portal-i').innerText = rk.i || 0;
+                    document.getElementById('portal-s').innerText = rk.s || 0;
+                    document.getElementById('portal-a').innerText = rk.a || 0;
+
+                    const persen = rk.persentase || 0;
+                    const hadirTotal = (rk.h || 0) + (rk.t || 0);
+                    const totalHari = rk.totalTercatat || 0;
+                    document.getElementById('portal-persen').innerText = `${persen}%`;
+                    document.getElementById('portal-persen-detail').innerText = `${persen}% (${hadirTotal} / ${totalHari} hari tercatat)`;
+
+                    const bar = document.getElementById('portal-persen-bar');
+                    bar.style.width = `${Math.min(100, Math.max(0, persen))}%`;
+                    bar.className = persen >= 85 ? 'progress-bar bg-success' : (persen >= 70 ? 'progress-bar bg-warning' : 'progress-bar bg-danger');
+
+                    const tb = document.getElementById('tbody-portal-rincian');
+                    if (rincian.length === 0) {
+                        tb.innerHTML = '<tr><td colspan="5" class="text-success fw-semibold py-3"><i class="fas fa-check-circle me-1"></i> Tidak ada catatan ketidakhadiran atau izin pada periode ini.</td></tr>';
+                    } else {
+                        tb.innerHTML = rincian.map((r, idx) => `
+                            <tr>
+                                <td>${idx + 1}</td>
+                                <td class="fw-semibold">${escapeHTML(formatTanggalIndo(r.tanggal))}</td>
+                                <td>${getRaporKategoriBadge(r.kode, r.kategori)}</td>
+                                <td class="small fw-semibold">${escapeHTML(r.waktu || '-')}</td>
+                                <td class="text-start small">${escapeHTML(r.keterangan || '-')}</td>
+                            </tr>`).join('');
+                    }
+                }, "Mengambil Rapor Kehadiran...");
+            };
+
+            if (!STATE.siswa || STATE.siswa.length === 0) {
+                callBackend('getSiswa_server', [], (data) => {
+                    STATE.siswa = data || [];
+                    cariDanMuat();
+                }, "Memuat Data Siswa...");
+            } else {
+                cariDanMuat();
+            }
+        }
+		
+        // =========================================================================
         // BOOTSTRAP APLIKASI SAAT DOM SIAP
         // =========================================================================
         document.addEventListener('DOMContentLoaded', () => {
             initPWAManifestAndSW();
             updateOnlineStatus();
+			const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('portal') === 'siswa') {
+                initPortalSiswaMode();
+                return;
+            }
 
             const modeBadge = document.getElementById('login-mode-badge');
             if (IS_PREVIEW) {
