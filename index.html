@@ -6630,7 +6630,14 @@
             }
             renderRekapPaginationNav('rekap-detail-pagination', currentPage, totalPages, 'goToRekapDetailPage');
         }
-
+        
+        function goToRekapDetailPage(pageNum) {
+            REKAP_STATE.detailPage = pageNum;
+            renderTableRekap();
+            const tbl = document.getElementById('tabel-rekap-qr');
+            if (tbl) tbl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+		
         function exportRekapExcel() {
             if (STATE.rekapData.length === 0 && REKAP_STATE.summaryWaktu.length === 0) {
                 return customAlert("Tidak ada data untuk diekspor ke Excel.");
