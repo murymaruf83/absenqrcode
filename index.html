@@ -1712,11 +1712,26 @@
                                 </span>
                                 <span id="rekap-detail-count-badge" class="badge bg-primary rounded-pill">0 Data</span>
                             </div>
-                            <div class="input-group input-group-sm" style="max-width: 280px;">
-                                <span class="input-group-text bg-white border-primary text-primary">
-                                    <i class="fas fa-search"></i>
-                                </span>
-                                <input type="text" id="rekap-search-detail" class="form-control border-primary" placeholder="Cari NIS, Nama, Kelas, atau Status..." oninput="REKAP_STATE.detailPage = 1; renderTableRekap();">
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <div class="input-group input-group-sm" style="width: auto;">
+                                    <span class="input-group-text bg-primary text-white fw-bold">
+                                        <i class="fas fa-sort-amount-up-alt me-1"></i> Urut
+                                    </span>
+                                    <select id="rekap-sort-detail" class="form-select border-primary fw-semibold" onchange="REKAP_STATE.detailPage = 1; renderTableRekap();">
+                                        <option value="nama_asc" selected>Nama (A &rarr; Z)</option>
+                                        <option value="nis_asc">NIS (Terkecil &rarr; Terbesar)</option>
+                                        <option value="kelas_asc">Kelas &amp; Nama (Ascending)</option>
+                                        <option value="tanggal_asc">Tanggal &amp; Jam Masuk (Ascending)</option>
+                                        <option value="status_asc">Status (H, T, I, S, A)</option>
+                                        <option value="default">Bawaan (Terbaru)</option>
+                                    </select>
+                                </div>
+                                <div class="input-group input-group-sm" style="max-width: 260px;">
+                                    <span class="input-group-text bg-white border-primary text-primary">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                    <input type="text" id="rekap-search-detail" class="form-control border-primary" placeholder="Cari NIS, Nama, Kelas, atau Status..." oninput="REKAP_STATE.detailPage = 1; renderTableRekap();">
+                                </div>
                             </div>
                         </div>
 
@@ -6521,13 +6536,15 @@
             const titleEl = document.getElementById('rekap-detail-title');
             const badgeEl = document.getElementById('rekap-detail-count-badge');
             const searchEl = document.getElementById('rekap-search-detail');
+            const sortEl = document.getElementById('rekap-sort-detail');
             const keyword = searchEl ? searchEl.value.trim().toLowerCase() : '';
+            const sortMode = sortEl ? sortEl.value : 'nama_asc';
 
             const allRows = STATE.rekapData || [];
             if (titleEl) titleEl.innerText = `Detail Log Scan Gerbang — ${REKAP_STATE.periodeLabel || ''}`;
             if (badgeEl) badgeEl.innerText = `${allRows.length} Data`;
 
-            const filteredRows = keyword
+            const filteredRows = (keyword
                 ? allRows.filter(r =>
                     String(r.tanggal || '').toLowerCase().includes(keyword) ||
                     String(r.nis || '').toLowerCase().includes(keyword) ||
@@ -6536,7 +6553,42 @@
                     String(r.status || '').toLowerCase().includes(keyword) ||
                     String(r.keterangan || '').toLowerCase().includes(keyword)
                 )
-                : allRows;
+                : allRows).slice();
+
+            // Pengurutan Ascending sesuai pilihan dropdown
+            if (sortMode === 'nama_asc') {
+                filteredRows.sort((a, b) =>
+                    String(a.nama || '').localeCompare(String(b.nama || ''), 'id', { sensitivity: 'base' }) ||
+                    String(a.nis || '').localeCompare(String(b.nis || ''), 'id', { numeric: true })
+                );
+            } else if (sortMode === 'nis_asc') {
+                filteredRows.sort((a, b) =>
+                    String(a.nis || '').localeCompare(String(b.nis || ''), 'id', { numeric: true, sensitivity: 'base' })
+                );
+            } else if (sortMode === 'kelas_asc') {
+                filteredRows.sort((a, b) => {
+                    if (typeof getUrutanTingkat === 'function' && typeof getTingkatKelas === 'function') {
+                        const ta = getUrutanTingkat(getTingkatKelas(a.kelas));
+                        const tb = getUrutanTingkat(getTingkatKelas(b.kelas));
+                        if (ta !== tb) return ta - tb;
+                    }
+                    return String(a.kelas || '').localeCompare(String(b.kelas || ''), 'id', { numeric: true, sensitivity: 'base' }) ||
+                        String(a.nama || '').localeCompare(String(b.nama || ''), 'id', { sensitivity: 'base' });
+                });
+            } else if (sortMode === 'tanggal_asc') {
+                filteredRows.sort((a, b) =>
+                    String(a.tanggal || '').localeCompare(String(b.tanggal || '')) ||
+                    String(a.jam_masuk || '99:99:99').localeCompare(String(b.jam_masuk || '99:99:99'))
+                );
+            } else if (sortMode === 'status_asc') {
+                const rankSt = { H: 1, T: 2, I: 3, S: 4, A: 5 };
+                filteredRows.sort((a, b) => {
+                    const sa = rankSt[String(a.status || '').trim().toUpperCase()] || 9;
+                    const sb = rankSt[String(b.status || '').trim().toUpperCase()] || 9;
+                    if (sa !== sb) return sa - sb;
+                    return String(a.nama || '').localeCompare(String(b.nama || ''), 'id', { sensitivity: 'base' });
+                });
+            }
 
             const totalItems = filteredRows.length;
             if (totalItems === 0) {
@@ -6577,11 +6629,6 @@
                 infoEl.innerText = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} data scan (Halaman ${currentPage} dari ${totalPages})`;
             }
             renderRekapPaginationNav('rekap-detail-pagination', currentPage, totalPages, 'goToRekapDetailPage');
-        }
-
-        function goToRekapDetailPage(pageNum) {
-            REKAP_STATE.detailPage = pageNum;
-            renderTableRekap();
         }
 
         function exportRekapExcel() {
