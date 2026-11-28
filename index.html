@@ -3161,10 +3161,14 @@
                 !GAS_API_URL.includes('GANTI_DENGAN_URL_DEPLOY_GAS_ANDA');
 
             if (isValidGasUrl) {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 20000); // Timeout otomatis 20 detik
+
                 try {
                     const response = await fetch(GAS_API_URL, {
                         method: 'POST',
                         redirect: 'follow',
+                        signal: controller.signal,
                         headers: {
                             'Content-Type': 'text/plain;charset=utf-8'
                         },
@@ -3174,6 +3178,7 @@
                             args: argsArray || []
                         })
                     });
+                    clearTimeout(timeoutId);
 
                     const rawText = await response.text();
                     let json;
@@ -3198,8 +3203,13 @@
                         customAlert("Error Server:\n" + (json && json.error ? json.error : "Permintaan gagal diproses oleh server GAS."));
                     }
                 } catch (err) {
+                    clearTimeout(timeoutId);
                     hideLoader();
-                    customAlert("Gagal menghubungi Server GAS API:\n" + (err && err.message ? err.message : String(err)));
+                    if (err && err.name === 'AbortError') {
+                        customAlert("Koneksi ke server terlalu lama (Timeout 20 detik).\nPeriksa kestabilan sinyal internet Anda lalu coba lagi.");
+                    } else {
+                        customAlert("Gagal menghubungi Server GAS API:\n" + (err && err.message ? err.message : String(err)));
+                    }
                 }
                 return;
             }
@@ -5492,46 +5502,7 @@
             wrap.classList.remove('hidden');
         }
 
-        async function hapusSatuSiswaByIdAsync(idSiswa) {
-            if (IS_PREVIEW) {
-                return handleDummyBackend('deleteSiswa_server', [idSiswa]);
-            }
-
-            const isValidGasUrl = GAS_API_URL &&
-                GAS_API_URL.startsWith('https://script.google.com/macros/s/') &&
-                !GAS_API_URL.includes('GANTI_DENGAN_URL_DEPLOY_GAS_ANDA');
-
-            if (isValidGasUrl) {
-                const response = await fetch(GAS_API_URL, {
-                    method: 'POST',
-                    redirect: 'follow',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({
-                        action: 'deleteSiswa_server',
-                        token: STATE.token || '',
-                        args: [idSiswa]
-                    })
-                });
-                const rawText = await response.text();
-                const json = JSON.parse(rawText);
-                if (json && json.ok === true) {
-                    return json.data || { success: true };
-                }
-                throw new Error((json && json.error) ? json.error : 'Gagal menghapus siswa.');
-            }
-
-            if (typeof google !== 'undefined' && google.script && google.script.run) {
-                return new Promise((resolve, reject) => {
-                    google.script.run
-                        .withSuccessHandler(resolve)
-                        .withFailureHandler(reject)
-                        .deleteSiswa_server(idSiswa);
-                });
-            }
-
-            throw new Error('Koneksi backend tidak tersedia.');
-        }
-
+        
         function hapusSatuKelas() {
             if (!STATE.user || STATE.user.role !== 'Admin') {
                 return customAlert("Akses ditolak. Fitur hapus kelas khusus untuk Admin.");
@@ -5553,38 +5524,18 @@
 
             customConfirm(
                 `PERINGATAN!\n\nAnda akan menghapus PERMANEN seluruh ${targetList.length} siswa pada ${labelKls}.\nTindakan ini tidak dapat dibatalkan.\n\nYakin ingin melanjutkan?`,
-                async () => {
-                    let berhasil = 0;
-                    let gagal = 0;
-
-                    showLoader(`Menyiapkan penghapusan ${labelKls} (0 / ${targetList.length} siswa)...`);
-
-                    for (let i = 0; i < targetList.length; i++) {
-                        const s = targetList[i];
-                        const loaderText = document.getElementById('loader-text');
-                        if (loaderText) {
-                            loaderText.innerText = `Menghapus ${labelKls}... (${i + 1} / ${targetList.length} siswa)`;
+                () => {
+                    callBackend('deleteSiswaByKelas_server', [kls], (res) => {
+                        if (res && res.success) {
+                            document.getElementById('siswa-filter-kelas').value = '';
+                            document.getElementById('siswa-search').value = '';
+                            STATE.siswaPage = 1;
+                            loadSiswaData();
+                            customAlert(res.message);
+                        } else {
+                            customAlert(res && res.message ? res.message : `Gagal menghapus ${labelKls}.`);
                         }
-
-                        try {
-                            const res = await hapusSatuSiswaByIdAsync(s.id_siswa);
-                            if (res && res.success !== false) berhasil++;
-                            else gagal++;
-                        } catch (err) {
-                            gagal++;
-                        }
-                    }
-
-                    hideLoader();
-                    document.getElementById('siswa-filter-kelas').value = '';
-                    document.getElementById('siswa-search').value = '';
-                    STATE.siswaPage = 1;
-                    loadSiswaData();
-
-                    const pesan = gagal === 0
-                        ? `Berhasil menghapus seluruh ${berhasil} siswa dari ${labelKls}.`
-                        : `Penghapusan ${labelKls} selesai.\n• Berhasil dihapus: ${berhasil} siswa\n• Gagal dihapus: ${gagal} siswa`;
-                    customAlert(pesan);
+                    }, `Menghapus ${labelKls} (${targetList.length} siswa)...`);
                 }
             );
         }
