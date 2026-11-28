@@ -1658,11 +1658,40 @@
                                 <span id="rekap-siswa-count-badge" class="badge bg-primary rounded-pill">0 Siswa</span>
                                 <span id="rekap-kelas-count-badge" class="badge bg-dark rounded-pill">0 Kelas</span>
                             </div>
-                            <div class="input-group input-group-sm" style="max-width: 280px;">
-                                <span class="input-group-text bg-white border-primary text-primary">
-                                    <i class="fas fa-search"></i>
-                                </span>
-                                <input type="text" id="rekap-search-siswa" class="form-control border-primary" placeholder="Cari NIS, Nama, atau Kelas..." oninput="REKAP_STATE.siswaPage = 1; renderRekapSiswaTable();">
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <div class="input-group input-group-sm" style="width: auto;">
+                                    <span class="input-group-text bg-primary text-white fw-bold">
+                                        <i class="fas fa-sort-amount-up-alt me-1"></i> Urut
+                                    </span>
+                                    <select id="rekap-sort-siswa" class="form-select border-primary fw-semibold" onchange="REKAP_STATE.siswaPage = 1; renderRekapSiswaTable();">
+                                        <option value="kelas_asc" selected>Kelas &amp; Nama (Ascending)</option>
+                                        <option value="nama_asc">Nama (A &rarr; Z)</option>
+                                        <option value="nis_asc">NIS (Terkecil &rarr; Terbesar)</option>
+                                        <option value="persen_desc">% Hadir (Tertinggi &rarr; Terendah)</option>
+                                        <option value="persen_asc">% Hadir (Terendah &rarr; Tertinggi)</option>
+                                        <option value="alpa_desc">Alpa Terbanyak</option>
+                                        <option value="telat_desc">Terlambat Terbanyak</option>
+                                    </select>
+                                </div>
+                                <div class="input-group input-group-sm" style="width: auto;">
+                                    <span class="input-group-text bg-info text-white fw-bold">
+                                        <i class="fas fa-filter me-1"></i> Filter
+                                    </span>
+                                    <select id="rekap-filter-status-siswa" class="form-select border-info fw-semibold" onchange="REKAP_STATE.siswaPage = 1; renderRekapSiswaTable();">
+                                        <option value="all" selected>Semua Siswa</option>
+                                        <option value="has_a">Ada Alpa (A &gt; 0)</option>
+                                        <option value="has_t">Ada Terlambat (T &gt; 0)</option>
+                                        <option value="has_i">Ada Ijin (I &gt; 0)</option>
+                                        <option value="has_s">Ada Sakit (S &gt; 0)</option>
+                                        <option value="perfect">Hadir 100%</option>
+                                    </select>
+                                </div>
+                                <div class="input-group input-group-sm" style="max-width: 240px;">
+                                    <span class="input-group-text bg-white border-primary text-primary">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                    <input type="text" id="rekap-search-siswa" class="form-control border-primary" placeholder="Cari NIS, Nama, atau Kelas..." oninput="REKAP_STATE.siswaPage = 1; renderRekapSiswaTable();">
+                                </div>
                             </div>
                         </div>
 
@@ -6392,7 +6421,12 @@
             const badgeSiswa = document.getElementById('rekap-siswa-count-badge');
             const badgeKelas = document.getElementById('rekap-kelas-count-badge');
             const searchEl = document.getElementById('rekap-search-siswa');
+            const sortEl = document.getElementById('rekap-sort-siswa');
+            const filterStEl = document.getElementById('rekap-filter-status-siswa');
+
             const keyword = searchEl ? searchEl.value.trim().toLowerCase() : '';
+            const sortMode = sortEl ? sortEl.value : 'kelas_asc';
+            const filterStatus = filterStEl ? filterStEl.value : 'all';
 
             const allList = REKAP_STATE.summarySiswa || [];
             const kelasUnikCount = new Set(allList.map(r => String(r.kelas || '').trim()).filter(Boolean)).size;
@@ -6401,13 +6435,52 @@
             if (badgeSiswa) badgeSiswa.innerText = `${allList.length} Siswa`;
             if (badgeKelas) badgeKelas.innerText = `${kelasUnikCount} Kelas`;
 
-            const filteredList = keyword
-                ? allList.filter(r =>
-                    String(r.nis || '').toLowerCase().includes(keyword) ||
-                    String(r.nama || '').toLowerCase().includes(keyword) ||
-                    String(r.kelas || '').toLowerCase().includes(keyword)
-                )
-                : allList;
+            // 1. Saring berdasarkan kata kunci & filter status
+            const filteredList = allList.filter(r => {
+                if (keyword) {
+                    const cocokCari =
+                        String(r.nis || '').toLowerCase().includes(keyword) ||
+                        String(r.nama || '').toLowerCase().includes(keyword) ||
+                        String(r.kelas || '').toLowerCase().includes(keyword);
+                    if (!cocokCari) return false;
+                }
+                if (filterStatus === 'has_a') return (r.a || 0) > 0;
+                if (filterStatus === 'has_t') return (r.t || 0) > 0;
+                if (filterStatus === 'has_i') return (r.i || 0) > 0;
+                if (filterStatus === 'has_s') return (r.s || 0) > 0;
+                if (filterStatus === 'perfect') return (r.total || 0) > 0 && r.persen === 100;
+                return true;
+            }).slice();
+
+            // 2. Pengurutan sesuai pilihan dropdown
+            if (sortMode === 'kelas_asc') {
+                filteredList.sort((a, b) => {
+                    if (typeof getUrutanTingkat === 'function' && typeof getTingkatKelas === 'function') {
+                        const ta = getUrutanTingkat(getTingkatKelas(a.kelas));
+                        const tb = getUrutanTingkat(getTingkatKelas(b.kelas));
+                        if (ta !== tb) return ta - tb;
+                    }
+                    return String(a.kelas || '').localeCompare(String(b.kelas || ''), 'id', { numeric: true, sensitivity: 'base' }) ||
+                        String(a.nama || '').localeCompare(String(b.nama || ''), 'id', { sensitivity: 'base' });
+                });
+            } else if (sortMode === 'nama_asc') {
+                filteredList.sort((a, b) =>
+                    String(a.nama || '').localeCompare(String(b.nama || ''), 'id', { sensitivity: 'base' }) ||
+                    String(a.nis || '').localeCompare(String(b.nis || ''), 'id', { numeric: true })
+                );
+            } else if (sortMode === 'nis_asc') {
+                filteredList.sort((a, b) =>
+                    String(a.nis || '').localeCompare(String(b.nis || ''), 'id', { numeric: true, sensitivity: 'base' })
+                );
+            } else if (sortMode === 'persen_desc') {
+                filteredList.sort((a, b) => (b.persen - a.persen) || (b.h - a.h) || String(a.nama || '').localeCompare(String(b.nama || ''), 'id'));
+            } else if (sortMode === 'persen_asc') {
+                filteredList.sort((a, b) => (a.persen - b.persen) || (b.a - a.a) || String(a.nama || '').localeCompare(String(b.nama || ''), 'id'));
+            } else if (sortMode === 'alpa_desc') {
+                filteredList.sort((a, b) => (b.a - a.a) || String(a.nama || '').localeCompare(String(b.nama || ''), 'id'));
+            } else if (sortMode === 'telat_desc') {
+                filteredList.sort((a, b) => (b.t - a.t) || String(a.nama || '').localeCompare(String(b.nama || ''), 'id'));
+            }
 
             const totalItems = filteredList.length;
             const totalPages = Math.max(1, Math.ceil(totalItems / REKAP_SISWA_PER_PAGE));
@@ -6423,7 +6496,7 @@
             if (totalItems === 0) {
                 const emptyText = allList.length === 0
                     ? 'Tidak ada data siswa pada kelas yang dipilih.'
-                    : `Tidak ditemukan siswa dengan kata kunci "${escapeHTML(keyword)}".`;
+                    : 'Tidak ditemukan siswa yang sesuai dengan filter atau pencarian ini.';
                 tb.innerHTML = `<tr><td colspan="13" class="text-muted py-4">${emptyText}</td></tr>`;
                 tf.innerHTML = '';
                 if (infoEl) infoEl.innerText = 'Menampilkan 0 siswa';
@@ -6459,9 +6532,10 @@
                 ? `H: ${sum.h} | T: ${sum.t} | I: ${sum.i} | S: ${sum.s} | A: ${sum.a} (Hadir ${sumPersen}%)`
                 : 'Belum ada data presensi';
 
+            const labelTotal = (keyword || filterStatus !== 'all') ? 'TOTAL HASIL FILTER' : 'TOTAL KESELURUHAN';
             tf.innerHTML = `
                 <tr>
-                    <td colspan="5">${keyword ? 'TOTAL HASIL CARI' : 'TOTAL KESELURUHAN'} (${totalItems} Siswa)</td>
+                    <td colspan="5">${labelTotal} (${totalItems} Siswa)</td>
                     <td class="text-success">${sum.h}</td>
                     <td class="text-orange">${sum.t}</td>
                     <td class="text-primary">${sum.i}</td>
@@ -6476,62 +6550,7 @@
                 infoEl.innerText = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} siswa (Halaman ${currentPage} dari ${totalPages})`;
             }
 
-            renderRekapSiswaPagination(currentPage, totalPages);
-        }
-
-        function renderRekapSiswaPagination(currentPage, totalPages) {
-            const pagEl = document.getElementById('rekap-siswa-pagination');
-            if (!pagEl) return;
-
-            if (totalPages <= 1) {
-                pagEl.innerHTML = '';
-                return;
-            }
-
-            const pages = [];
-            if (totalPages <= 7) {
-                for (let p = 1; p <= totalPages; p++) pages.push(p);
-            } else {
-                pages.push(1);
-                let start = Math.max(2, currentPage - 1);
-                let end = Math.min(totalPages - 1, currentPage + 1);
-
-                if (currentPage <= 3) {
-                    start = 2;
-                    end = 4;
-                } else if (currentPage >= totalPages - 2) {
-                    start = totalPages - 3;
-                    end = totalPages - 1;
-                }
-
-                if (start > 2) pages.push('...');
-                for (let p = start; p <= end; p++) pages.push(p);
-                if (end < totalPages - 1) pages.push('...');
-                pages.push(totalPages);
-            }
-
-            let html = `
-                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                    <button type="button" class="page-link" onclick="goToRekapSiswaPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>&laquo; Sebelumnya</button>
-                </li>`;
-
-            pages.forEach(p => {
-                if (p === '...') {
-                    html += '<li class="page-item disabled"><span class="page-link">&hellip;</span></li>';
-                } else {
-                    html += `
-                        <li class="page-item ${p === currentPage ? 'active' : ''}">
-                            <button type="button" class="page-link fw-semibold" onclick="goToRekapSiswaPage(${p})">${p}</button>
-                        </li>`;
-                }
-            });
-
-            html += `
-                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-                    <button type="button" class="page-link" onclick="goToRekapSiswaPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Berikutnya &raquo;</button>
-                </li>`;
-
-            pagEl.innerHTML = html;
+            renderRekapPaginationNav('rekap-siswa-pagination', currentPage, totalPages, 'goToRekapSiswaPage');
         }
 
         function goToRekapSiswaPage(pageNum) {
