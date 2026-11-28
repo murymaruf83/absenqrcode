@@ -3197,6 +3197,10 @@
                     } else {
                         customAlert("Error Server:\n" + (json && json.error ? json.error : "Permintaan gagal diproses oleh server GAS."));
                     }
+                } catch (err) {
+                    hideLoader();
+                    customAlert("Gagal menghubungi Server GAS API:\n" + (err && err.message ? err.message : String(err)));
+                }
                 return;
             }
 
