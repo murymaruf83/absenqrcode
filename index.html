@@ -2829,7 +2829,7 @@
             try {
                 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
                     const swCode = `
-                        const CACHE_NAME = 'absensi-qr-pro-v2';
+                        const CACHE_NAME = 'absensi-qr-pro-v3';
                         self.addEventListener('install', (event) => {
                             self.skipWaiting();
                         });
@@ -6279,7 +6279,7 @@
 
             let html = `
                 <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                    <button type="button" class="page-link" onclick="${fnName}(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>&laquo; Sebelumnya</button>
+                    <button type="button" class="page-link" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>&laquo; Sebelumnya</button>
                 </li>`;
 
             pages.forEach(p => {
@@ -6288,19 +6288,29 @@
                 } else {
                     html += `
                         <li class="page-item ${p === currentPage ? 'active' : ''}">
-                            <button type="button" class="page-link fw-semibold" onclick="${fnName}(${p})">${p}</button>
+                            <button type="button" class="page-link fw-semibold" data-page="${p}">${p}</button>
                         </li>`;
                 }
             });
 
             html += `
                 <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-                    <button type="button" class="page-link" onclick="${fnName}(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Berikutnya &raquo;</button>
+                    <button type="button" class="page-link" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''}>Berikutnya &raquo;</button>
                 </li>`;
 
             pagEl.innerHTML = html;
-        }
 
+            pagEl.querySelectorAll('button[data-page]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (btn.disabled) return;
+                    const targetPage = parseInt(btn.getAttribute('data-page'), 10);
+                    if (!isNaN(targetPage) && typeof window[fnName] === 'function') {
+                        window[fnName](targetPage);
+                    }
+                });
+            });
+        }
         function renderRekapWaktuTable() {
             const tb = document.getElementById('tbody-rekap-waktu');
             const tf = document.getElementById('tfoot-rekap-waktu');
