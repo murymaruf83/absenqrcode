@@ -1439,7 +1439,40 @@
                             </button>
                         </div>
                     </div>
+                    <!-- Bar Aksi Pindah Kelas Terpilih (Otomatis Muncul Saat Ada Siswa Dicentang) -->
+                    <div id="bar-pindah-terpilih" class="alert alert-primary py-2 px-3 mb-2 d-flex flex-wrap justify-content-between align-items-center gap-2 hidden admin-only">
+                        <div class="small fw-bold text-primary">
+                            <i class="fas fa-check-square me-1"></i>
+                            <span id="lbl-jumlah-terpilih">0</span> siswa dipilih
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <input type="text" id="input-kelas-tujuan-terpilih" class="form-control form-control-sm border-primary fw-bold" style="width: 170px;" placeholder="Kelas tujuan (cth: XI-2)">
+                            <button type="button" class="btn btn-sm btn-primary fw-bold" onclick="prosesPindahKelasTerpilih()">
+                                <i class="fas fa-exchange-alt me-1"></i> Pindah Kelas
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary fw-bold" onclick="resetPilihanSiswa()">
+                                Batal
+                            </button>
+                        </div>
+                    </div>
 
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped table-hover align-middle text-center mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th width="4%" class="admin-only">
+                                        <input type="checkbox" class="form-check-input" id="chk-siswa-all" onchange="togglePilihSemuaSiswa(this)" title="Pilih Semua di Halaman Ini">
+                                    </th>
+                                    <th width="5%">No</th>
+                                    <th>NIS (Kode QR)</th>
+                                    <th class="text-start">Nama Siswa</th>
+                                    <th>Jenis Kelamin</th>
+                                    <th>Kelas</th>
+                                    <th>Kartu QR</th>
+                                    <th class="admin-only">Aksi</th>
+                                </tr>
+                            </thead>
+							
                     <div class="table-responsive">
                         <table class="table table-bordered table-striped table-hover align-middle text-center mb-0">
                             <thead class="table-dark">
@@ -5172,10 +5205,13 @@
             const infoEl = document.getElementById('siswa-pagination-info');
             const pagEl = document.getElementById('siswa-pagination-nav');
 
+            if (!STATE.selectedSiswaIds) STATE.selectedSiswaIds = new Set();
+
             if (totalItems === 0) {
-                tb.innerHTML = `<tr><td colspan="${isAdmin ? 7 : 6}" class="text-muted py-4">Tidak ada data siswa ditemukan.</td></tr>`;
+                tb.innerHTML = `<tr><td colspan="${isAdmin ? 8 : 6}" class="text-muted py-4">Tidak ada data siswa ditemukan.</td></tr>`;
                 if (infoEl) infoEl.innerText = 'Menampilkan 0 siswa';
                 if (pagEl) pagEl.innerHTML = '';
+                updateBarPindahTerpilih();
                 return;
             }
 
@@ -5188,8 +5224,14 @@
             const endIdx = Math.min(startIdx + SISWA_PER_PAGE, totalItems);
             const pageItems = list.slice(startIdx, endIdx);
 
-            tb.innerHTML = pageItems.map((s, idx) => `
+            tb.innerHTML = pageItems.map((s, idx) => {
+                const isChecked = STATE.selectedSiswaIds.has(s.id_siswa);
+                return `
                 <tr>
+                    ${isAdmin ? `
+                    <td>
+                        <input type="checkbox" class="form-check-input chk-siswa-item" value="${escapeHTML(s.id_siswa)}" ${isChecked ? 'checked' : ''} onchange="togglePilihSiswa('${escapeHTML(s.id_siswa)}', this.checked)">
+                    </td>` : ''}
                     <td>${startIdx + idx + 1}</td>
                     <td><span class="badge bg-primary px-2">${escapeHTML(s.nis)}</span></td>
                     <td class="text-start fw-bold">${escapeHTML(s.nama)}</td>
@@ -5205,7 +5247,14 @@
                         <button class="btn btn-sm btn-warning" onclick="editSiswa('${escapeHTML(s.id_siswa)}')" title="Edit"><i class="fas fa-edit"></i></button>
                         <button class="btn btn-sm btn-danger" onclick="hapusSiswa('${escapeHTML(s.id_siswa)}')" title="Hapus"><i class="fas fa-trash"></i></button>
                     </td>` : ''}
-                </tr>`).join('');
+                </tr>`;
+            }).join('');
+
+            const chkAll = document.getElementById('chk-siswa-all');
+            if (chkAll) {
+                chkAll.checked = pageItems.length > 0 && pageItems.every(s => STATE.selectedSiswaIds.has(s.id_siswa));
+            }
+            updateBarPindahTerpilih();
 
             if (infoEl) {
                 infoEl.innerText = `Menampilkan ${startIdx + 1} - ${endIdx} dari ${totalItems} siswa (Halaman ${currentPage} dari ${totalPages})`;
@@ -5430,6 +5479,70 @@
                     }
                 }, "Memproses Kenaikan Kelas Massal...");
             });
+        }
+		
+		function togglePilihSiswa(idSiswa, isChecked) {
+            if (!STATE.selectedSiswaIds) STATE.selectedSiswaIds = new Set();
+            if (isChecked) STATE.selectedSiswaIds.add(idSiswa);
+            else STATE.selectedSiswaIds.delete(idSiswa);
+            updateBarPindahTerpilih();
+        }
+
+        function togglePilihSemuaSiswa(masterChk) {
+            if (!STATE.selectedSiswaIds) STATE.selectedSiswaIds = new Set();
+            document.querySelectorAll('.chk-siswa-item').forEach(chk => {
+                chk.checked = masterChk.checked;
+                if (masterChk.checked) STATE.selectedSiswaIds.add(chk.value);
+                else STATE.selectedSiswaIds.delete(chk.value);
+            });
+            updateBarPindahTerpilih();
+        }
+
+        function resetPilihanSiswa() {
+            if (STATE.selectedSiswaIds) STATE.selectedSiswaIds.clear();
+            const chkAll = document.getElementById('chk-siswa-all');
+            if (chkAll) chkAll.checked = false;
+            document.querySelectorAll('.chk-siswa-item').forEach(chk => { chk.checked = false; });
+            const inp = document.getElementById('input-kelas-tujuan-terpilih');
+            if (inp) inp.value = '';
+            updateBarPindahTerpilih();
+        }
+
+        function updateBarPindahTerpilih() {
+            const bar = document.getElementById('bar-pindah-terpilih');
+            const lbl = document.getElementById('lbl-jumlah-terpilih');
+            if (!bar || !lbl) return;
+            const isAdmin = STATE.user && STATE.user.role === 'Admin';
+            const jml = STATE.selectedSiswaIds ? STATE.selectedSiswaIds.size : 0;
+
+            if (isAdmin && jml > 0) {
+                lbl.innerText = jml;
+                bar.classList.remove('hidden');
+            } else {
+                bar.classList.add('hidden');
+            }
+        }
+
+        function prosesPindahKelasTerpilih() {
+            const ids = STATE.selectedSiswaIds ? Array.from(STATE.selectedSiswaIds) : [];
+            const tujuan = document.getElementById('input-kelas-tujuan-terpilih').value.trim();
+            if (ids.length === 0) return customAlert("Pilih minimal 1 siswa terlebih dahulu.");
+            if (!tujuan) return customAlert("Ketik nama kelas tujuan terlebih dahulu (contoh: XI-2).");
+
+            customConfirm(
+                `Pindahkan ${ids.length} siswa terpilih ke Kelas ${tujuan}?`,
+                () => {
+                    callBackend('pindahKelasTerpilih_server', [JSON.stringify(ids), tujuan], (res) => {
+                        if (res && res.success) {
+                            resetPilihanSiswa();
+                            loadSiswaData();
+                            customAlert(res.message);
+                        } else {
+                            customAlert(res && res.message ? res.message : "Gagal memindahkan siswa terpilih.");
+                        }
+                    }, `Memindahkan ${ids.length} siswa ke Kelas ${tujuan}...`);
+                }
+            );
         }
 		
         // --- FITUR IMPORT EXCEL / CSV MASSAL ---
