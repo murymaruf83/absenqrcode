@@ -691,7 +691,7 @@
                         <div class="mb-2 text-primary">
                             <i class="fas fa-qrcode fa-3x"></i>
                         </div>
-                        <h3 class="fw-bold text-primary mb-1">Absensi Kelas Pro</h3>
+                        <h3 class="fw-bold text-primary mb-1" id="login-app-name">Absensi Kelas Pro</h3>
                         <div class="d-flex flex-wrap justify-content-center gap-1 mb-3">
                             <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3 py-1">
                                 Edisi Sekolah &bull; QR Gerbang
@@ -699,12 +699,6 @@
                             <span id="login-mode-badge" class="badge bg-info bg-opacity-10 text-primary border border-primary rounded-pill px-3 py-1">
                                 <i class="fas fa-server me-1"></i> Standalone PWA
                             </span>
-                        </div>
-
-                        <div id="preview-badge-login" class="alert alert-warning py-2 px-3 small text-start mb-3 hidden">
-                            <strong><i class="fas fa-flask me-1"></i> Mode Preview Aktif (Data Dummy):</strong><br>
-                            Admin: <code>admin</code> / <code>edudigital</code><br>
-                            Petugas: <code>peserta</code> / <code>edudigital</code>
                         </div>
 
                         <form id="form-login" onsubmit="event.preventDefault(); handleLogin();">
@@ -726,7 +720,7 @@
                             </button>
                         </form>
                         <div class="mt-4 text-muted small">
-                            &copy; 2026 Sistem Presensi QR Gerbang Sekolah
+                            <span id="login-footer-copy">&copy; Sistem Presensi QR Gerbang Sekolah</span>
                         </div>
                     </div>
                 </div>
@@ -1222,7 +1216,7 @@
                 <!-- Header Info Sekolah & Jam Live -->
                 <div class="card-custom py-2 px-3 mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2 border-start border-primary border-4">
                     <div>
-                        <span class="fw-bold text-primary"><i class="fas fa-school me-1"></i> <span id="scan-nama-sekolah">SMA Negeri 8 Depok</span></span>
+                        <span class="fw-bold text-primary"><i class="fas fa-school me-1"></i> <span id="scan-nama-sekolah">Nama Sekolah</span></span>
                         <div class="small text-muted">
                             Batas Masuk: <strong class="text-dark" id="info-jam-masuk">07:15</strong> &bull;
                             Jam Pulang: <strong class="text-dark" id="info-jam-pulang">14:05</strong> &bull;
@@ -1238,25 +1232,7 @@
                 </div>
 
                 <!-- Panel Simulasi Waktu (Hanya Tampil di Mode Preview) -->
-                <div id="preview-simulasi-panel" class="alert alert-info py-2 px-3 mb-3 hidden">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                        <div class="small">
-                            <strong><i class="fas fa-vial me-1"></i> Simulasi Waktu Preview:</strong> Uji skenario datang tepat waktu, telat, izin tengah jalan, dan pulang normal.
-                        </div>
-                        <div class="d-flex flex-wrap gap-1 align-items-center">
-                            <select id="simulasi-jam-select" class="form-select form-select-sm border-info fw-bold" style="width: auto;">
-                                <option value="REAL">Waktu Nyata Perangkat</option>
-                                <option value="07:05:00">07:05 (Masuk Tepat Waktu)</option>
-                                <option value="07:25:00">07:25 (Masuk Terlambat)</option>
-                                <option value="10:30:00">10:30 (Ijin Pulang Tengah Jalan)</option>
-                                <option value="14:15:00">14:15 (Pulang Normal &gt;= 14:05)</option>
-                            </select>
-                            <button class="btn btn-sm btn-primary fw-bold" onclick="triggerDemoScan('82610502')">Test: Aditya (82610502)</button>
-                            <button class="btn btn-sm btn-success fw-bold" onclick="triggerDemoScan('82610514')">Test: Nayla (82610514)</button>
-                        </div>
-                    </div>
-                </div>
-
+                
                 <div class="row g-3">
                     <!-- Panel Kiri: Pemindai Kamera, Foto QR & USB Scanner -->
                     <div class="col-12 col-lg-5">
@@ -2808,8 +2784,19 @@
         // 1. UBAH IS_PREVIEW KE false JIKA SUDAH DI-DEPLOY KE GITHUB PAGES / BLOGGER
         // 2. TEMPEL URL WEB APP GOOGLE APPS SCRIPT (/exec) PADA GAS_API_URL
         // =========================================================================
-        const IS_PREVIEW = false; // UBAH KE false JIKA SUDAH DI-DEPLOY KE GITHUB PAGES / BLOGGER
-        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbz4uvpE4ptMenS-1N54LnbGjbdqNz5PyrcfUWA3aQ0vL9MuzhCKOf62XJl7m-0HwoBd/exec";
+        // =========================================================================
+        // KONFIGURASI WHITE-LABEL (UBAH BAGIAN INI SAAT DEPLOY KE SEKOLAH BARU)
+        // =========================================================================
+        const APP_CONFIG = {
+            APP_NAME: "Absensi Kelas Pro",
+            APP_SUBTITLE: "Presensi QR Gerbang Sekolah",
+            DEFAULT_SCHOOL_NAME: "Nama Sekolah",
+            THEME_COLOR: "#0d6efd",
+            LOGO_URL: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+            GAS_API_URL: "https://script.google.com/macros/s/AKfycbz4uvpE4ptMenS-1N54LnbGjbdqNz5PyrcfUWA3aQ0vL9MuzhCKOf62XJl7m-0HwoBd/exec"
+        };
+        const GAS_API_URL = APP_CONFIG.GAS_API_URL;
+        const SESSION_STORAGE_KEY = "absensi_qr_pro_session_v1";
 
         // =========================================================================
         // INISIALISASI PWA (MANIFEST DINAMIS & SERVICE WORKER AMAN)
@@ -2927,84 +2914,9 @@
         }
 
         function getCurrentTimeStr() {
-            if (IS_PREVIEW) {
-                const sim = document.getElementById('simulasi-jam-select');
-                if (sim && sim.value !== 'REAL') return sim.value;
-            }
-            const d = new Date();
-            return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
-        }
-
-        let DUMMY_DB = {
-            users: [
-                { username: "admin", password: "edudigital", role: "Admin", nama: "Administrator Sekolah" },
-                { username: "peserta", password: "edudigital", role: "Peserta", nama: "Petugas Piket Gerbang" }
-            ],
-            pengaturan: {
-                nama_sekolah: "SMA Negeri 8 Depok",
-                jam_masuk: "07:15",
-                jam_pulang: "14:05",
-                cooldown_menit: 5
-            },
-            siswa: [
-                // 12 Siswa Kelas X-1
-                { id_siswa: "S001", nis: "82610501", nama: "Aji Santoso", jenis_kelamin: "L", kelas: "X-1" },
-                { id_siswa: "S002", nis: "82610502", nama: "Aditya Pratama", jenis_kelamin: "L", kelas: "X-1" },
-                { id_siswa: "S003", nis: "82610503", nama: "Aulia Rahmawati", jenis_kelamin: "P", kelas: "X-1" },
-                { id_siswa: "S004", nis: "82610504", nama: "Bagas Saputra", jenis_kelamin: "L", kelas: "X-1" },
-                { id_siswa: "S005", nis: "82610505", nama: "Citra Dewi Lestari", jenis_kelamin: "P", kelas: "X-1" },
-                { id_siswa: "S006", nis: "82610506", nama: "Daffa Maulana", jenis_kelamin: "L", kelas: "X-1" },
-                { id_siswa: "S007", nis: "82610507", nama: "Fadhila Nurul Azizah", jenis_kelamin: "P", kelas: "X-1" },
-                { id_siswa: "S008", nis: "82610508", nama: "Gilang Ramadhan", jenis_kelamin: "L", kelas: "X-1" },
-                { id_siswa: "S009", nis: "82610509", nama: "Haris Firmansyah", jenis_kelamin: "L", kelas: "X-1" },
-                { id_siswa: "S010", nis: "82610510", nama: "Intan Permata Sari", jenis_kelamin: "P", kelas: "X-1" },
-                { id_siswa: "S011", nis: "82610511", nama: "Kevin Alfareza", jenis_kelamin: "L", kelas: "X-1" },
-                { id_siswa: "S012", nis: "82610512", nama: "Nadia Putri Kartika", jenis_kelamin: "P", kelas: "X-1" },
-                // 11 Siswa Kelas X-2
-                { id_siswa: "S013", nis: "82610513", nama: "Muhammad Rizky Fauzan", jenis_kelamin: "L", kelas: "X-2" },
-                { id_siswa: "S014", nis: "82610514", nama: "Nayla Khairunnisa", jenis_kelamin: "P", kelas: "X-2" },
-                { id_siswa: "S015", nis: "82610515", nama: "Rafi Akbar Hidayat", jenis_kelamin: "L", kelas: "X-2" },
-                { id_siswa: "S016", nis: "82610516", nama: "Salma Azzahra", jenis_kelamin: "P", kelas: "X-2" },
-                { id_siswa: "S017", nis: "82610517", nama: "Satria Wijaya Kusuma", jenis_kelamin: "L", kelas: "X-2" },
-                { id_siswa: "S018", nis: "82610518", nama: "Siska Wulandari", jenis_kelamin: "P", kelas: "X-2" },
-                { id_siswa: "S019", nis: "82610519", nama: "Syifa Maulida", jenis_kelamin: "P", kelas: "X-2" },
-                { id_siswa: "S020", nis: "82610520", nama: "Tegar Budi Santoso", jenis_kelamin: "L", kelas: "X-2" },
-                { id_siswa: "S021", nis: "82610521", nama: "Tiara Anggraini", jenis_kelamin: "P", kelas: "X-2" },
-                { id_siswa: "S022", nis: "82610522", nama: "Yoga Prasetyo", jenis_kelamin: "L", kelas: "X-2" },
-                { id_siswa: "S023", nis: "82610523", nama: "Zahra Nabila Putri", jenis_kelamin: "P", kelas: "X-2" }
-            ],
-            // 2 data absensi awal hari ini agar tersisa tepat 21 siswa belum absen (3 halaman: 10, 10, 1)
-            absensi: [
-                {
-                    id_absen: "ABS-INIT-01",
-                    tanggal: getTodayStr(),
-                    id_siswa: "S001",
-                    nis: "82610501",
-                    nama: "Aji Santoso",
-                    jenis_kelamin: "L",
-                    kelas: "X-1",
-                    jam_masuk: "07:08:15",
-                    jam_pulang: "",
-                    status: "H",
-                    status_pulang: "Belum Pulang",
-                    keterangan: "Tepat Waktu"
-                },
-                {
-                    id_absen: "ABS-INIT-02",
-                    tanggal: getTodayStr(),
-                    id_siswa: "S013",
-                    nis: "82610513",
-                    nama: "Muhammad Rizky Fauzan",
-                    jenis_kelamin: "L",
-                    kelas: "X-2",
-                    jam_masuk: "",
-                    jam_pulang: "",
-                    status: "S",
-                    status_pulang: "-",
-                    keterangan: "Konfirmasi Orang Tua"
-                }
-            ]
-        };
+         const d = new Date();
+         return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+     }
 
         const BELUM_ABSEN_PER_PAGE = 10;
         const SISWA_PER_PAGE = 20;
@@ -3019,7 +2931,7 @@
             izinKeluarHariIni: [],
             rekapData: [],
 			raporData: null,
-            pengaturan: { nama_sekolah: "SMA Negeri 8 Depok", jam_masuk: "07:15", jam_pulang: "14:05", cooldown_menit: 5 },
+            pengaturan: { nama_sekolah: APP_CONFIG.DEFAULT_SCHOOL_NAME, jam_masuk: "07:15", jam_pulang: "14:05", cooldown_menit: 5 },
             users: [],
             activeQRCodeSiswa: null,
             isProcessingScan: false,
@@ -3144,16 +3056,6 @@
         async function callBackend(funcName, argsArray, onSuccess, customMsg) {
             if (customMsg !== false) showLoader(customMsg || "Memproses Data...");
 
-            // 1. Mode Preview (Data Dummy lokal)
-            if (IS_PREVIEW) {
-                setTimeout(() => {
-                    hideLoader();
-                    const res = handleDummyBackend(funcName, argsArray || []);
-                    if (onSuccess) onSuccess(res);
-                }, 180);
-                return;
-            }
-
             // 2. Mode Standalone Opsi A: Fetch JSON POST ke Google Apps Script Web App (doPost)
             // Header text/plain;charset=utf-8 mencegah CORS preflight OPTIONS yang tidak didukung GAS
             const isValidGasUrl = GAS_API_URL &&
@@ -3194,6 +3096,7 @@
                     } else if (json && json.authError) {
                         stopQRScanner();
                         document.body.classList.remove('kiosk-mode');
+						clearSessionState_();
                         STATE.user = null;
                         STATE.token = '';
                         document.getElementById('main-app').classList.add('hidden');
@@ -3232,241 +3135,36 @@
             hideLoader();
             customAlert("URL API Google Apps Script (GAS_API_URL) belum diatur!\n\nSilakan tempel URL Web App (/exec) Anda pada variabel GAS_API_URL di bagian atas kode script, atau ubah IS_PREVIEW menjadi true untuk pengujian lokal.");
         }
-
-        function handleDummyBackend(funcName, args) {
-            const today = getTodayStr();
-            switch (funcName) {
-                case 'login_server': {
-                    const [u, p] = args;
-                    const found = DUMMY_DB.users.find(x => x.username.toLowerCase() === String(u).toLowerCase() && x.password === String(p));
-                    if (found) return { success: true, user: { username: found.username, role: found.role, nama: found.nama } };
-                    return { success: false, message: "Username atau Password salah!" };
-                }
-                case 'getInitialData_server': {
-                    const tgl = args[0] || today;
-                    return {
-                        siswa: [...DUMMY_DB.siswa],
-                        absensi: DUMMY_DB.absensi.filter(a => a.tanggal === tgl),
-                        pengaturan: { ...DUMMY_DB.pengaturan }
-                    };
-                }
-                case 'prosesScanQR_server': {
-                    const nis = String(args[0] || "").trim().toUpperCase();
-                    const siswa = DUMMY_DB.siswa.find(s => String(s.nis).toUpperCase() === nis);
-                    if (!siswa) return { statusCode: "NOT_FOUND", message: `QR Code / NIS "${nis}" tidak terdaftar di database siswa.` };
-
-                    const jamSekarang = getCurrentTimeStr();
-                    const menitSekarang = timeToMinutes(jamSekarang);
-                    const menitMasuk = timeToMinutes(DUMMY_DB.pengaturan.jam_masuk);
-                    const menitPulang = timeToMinutes(DUMMY_DB.pengaturan.jam_pulang);
-                    const cooldown = parseInt(DUMMY_DB.pengaturan.cooldown_menit || 5, 10);
-                    const existing = DUMMY_DB.absensi.find(a => a.tanggal === today && String(a.nis).toUpperCase() === nis);
-
-                    if (!existing) {
-                        const isLate = menitSekarang > menitMasuk;
-                        const rec = {
-                            id_absen: "ABS-" + Date.now(),
-                            tanggal: today,
-                            id_siswa: siswa.id_siswa,
-                            nis: siswa.nis,
-                            nama: siswa.nama,
-                            jenis_kelamin: siswa.jenis_kelamin,
-                            kelas: siswa.kelas,
-                            jam_masuk: jamSekarang,
-                            jam_pulang: "",
-                            status: isLate ? "T" : "H",
-                            status_pulang: "Belum Pulang",
-                            keterangan: isLate ? `Terlambat (Batas ${DUMMY_DB.pengaturan.jam_masuk})` : "Tepat Waktu"
-                        };
-                        DUMMY_DB.absensi.unshift(rec);
-                        return { statusCode: "CHECK_IN", message: isLate ? "Scan Masuk Tercatat (TERLAMBAT)" : "Scan Masuk Berhasil (HADIR TEPAT WAKTU)", siswa, record: rec, jamScan: jamSekarang };
-                    }
-
-                    if (!existing.jam_masuk) {
-                        const isLate = menitSekarang > menitMasuk;
-                        existing.jam_masuk = jamSekarang;
-                        existing.status = isLate ? "T" : "H";
-                        existing.status_pulang = "Belum Pulang";
-                        existing.keterangan = isLate ? "Terlambat (Update via Scan)" : "Hadir Tepat Waktu (Update via Scan)";
-                        return { statusCode: "CHECK_IN", message: "Status kehadiran diperbarui via Scan Masuk.", siswa, record: existing, jamScan: jamSekarang };
-                    }
-
-                    if (existing.jam_pulang) {
-                        return { statusCode: "ALREADY_DONE", message: `Siswa sudah tercatat keluar/pulang pada pukul ${existing.jam_pulang} (${existing.status_pulang}).`, siswa, record: existing, jamScan: jamSekarang };
-                    }
-
-                    const selisihMenit = menitSekarang - timeToMinutes(existing.jam_masuk);
-                    if (selisihMenit >= 0 && selisihMenit < cooldown) {
-                        return { statusCode: "COOLDOWN", message: `Siswa baru saja scan masuk pukul ${existing.jam_masuk}. Tunggu ${cooldown - selisihMenit} menit lagi untuk scan keluar.`, siswa, record: existing, jamScan: jamSekarang, sisaMenit: cooldown - selisihMenit };
-                    }
-
-                    if (menitSekarang < menitPulang) {
-                        return { statusCode: "NEED_IJIN_REASON", message: `Scan keluar sebelum jam pulang (${DUMMY_DB.pengaturan.jam_pulang}). Silakan masukkan alasan izin pulang awal.`, siswa, record: existing, jamScan: jamSekarang };
-                    }
-
-                    existing.jam_pulang = jamSekarang;
-                    existing.status_pulang = "Pulang Normal";
-                    return { statusCode: "CHECK_OUT", message: "Scan Pulang Normal Berhasil Tercatat. Hati-hati di jalan!", siswa, record: existing, jamScan: jamSekarang };
-                }
-                case 'simpanIjinPulang_server': {
-                    const [idAbsen, alasan] = args;
-                    const jamSekarang = getCurrentTimeStr();
-                    const rec = DUMMY_DB.absensi.find(a => a.id_absen === idAbsen);
-                    if (!rec) return { success: false, message: "Data presensi hari ini tidak ditemukan." };
-                    rec.jam_pulang = jamSekarang;
-                    rec.status = "I";
-                    rec.status_pulang = "Ijin Pulang Awal";
-                    rec.keterangan = "Ijin Pulang: " + alasan;
-                    const siswa = DUMMY_DB.siswa.find(s => s.id_siswa === rec.id_siswa) || rec;
-                    return { success: true, message: "Status siswa otomatis diperbarui menjadi IJIN (Pulang Awal).", siswa, record: rec, jamScan: jamSekarang };
-                }
-                case 'simpanAbsenManual_server': {
-                    const p = JSON.parse(args[0]);
-                    const siswa = DUMMY_DB.siswa.find(s => s.id_siswa === p.id_siswa);
-                    if (!siswa) return { success: false, message: "Siswa tidak ditemukan." };
-                    const existing = DUMMY_DB.absensi.find(a => a.tanggal === p.tanggal && a.id_siswa === siswa.id_siswa);
-                    if (existing) {
-                        existing.status = p.status;
-                        existing.status_pulang = "-";
-                        existing.keterangan = p.keterangan || "Input Manual";
-                    } else {
-                        DUMMY_DB.absensi.unshift({
-                            id_absen: "ABS-" + Date.now(),
-                            tanggal: p.tanggal,
-                            id_siswa: siswa.id_siswa,
-                            nis: siswa.nis,
-                            nama: siswa.nama,
-                            jenis_kelamin: siswa.jenis_kelamin,
-                            kelas: siswa.kelas,
-                            jam_masuk: "",
-                            jam_pulang: "",
-                            status: p.status,
-                            status_pulang: "-",
-                            keterangan: p.keterangan || "Input Manual"
-                        });
-                    }
-                    return { success: true, message: "Status ketidakhadiran berhasil disimpan." };
-                }
-                case 'getSiswa_server':
-                    return [...DUMMY_DB.siswa];
-                case 'saveSiswa_server': {
-                    const obj = JSON.parse(args[0]);
-                    const nisBaru = String(obj.nis).trim().toUpperCase();
-                    if (obj.id_siswa) {
-                        const idx = DUMMY_DB.siswa.findIndex(s => s.id_siswa === obj.id_siswa);
-                        if (idx >= 0) {
-                            DUMMY_DB.siswa[idx] = { ...obj, nis: nisBaru };
-                            return { success: true, message: "Data siswa berhasil diperbarui." };
-                        }
-                    }
-                    if (DUMMY_DB.siswa.some(s => String(s.nis).toUpperCase() === nisBaru)) {
-                        return { success: false, message: `NIS ${nisBaru} sudah terdaftar pada siswa lain!` };
-                    }
-                    obj.id_siswa = "S" + Date.now();
-                    obj.nis = nisBaru;
-                    DUMMY_DB.siswa.push(obj);
-                    return { success: true, message: "Siswa baru berhasil ditambahkan." };
-                }
-                case 'importSiswaMassal_server': {
-                    const list = JSON.parse(args[0] || '[]');
-                    const mode = String(args[1] || 'skip').toLowerCase();
-                    let added = 0;
-                    let updated = 0;
-                    let skipped = 0;
-                    const baseTime = Date.now();
-
-                    list.forEach((item, idx) => {
-                        const nis = String(item.nis || '').trim().toUpperCase();
-                        const nama = String(item.nama || '').trim();
-                        const jk = String(item.jenis_kelamin || '').trim().toUpperCase();
-                        const kelas = String(item.kelas || '').trim();
-
-                        if (!nis || !nama || !kelas || (jk !== 'L' && jk !== 'P')) {
-                            skipped++;
-                            return;
-                        }
-
-                        const existingIdx = DUMMY_DB.siswa.findIndex(s => String(s.nis).trim().toUpperCase() === nis);
-                        if (existingIdx >= 0) {
-                            if (mode === 'update') {
-                                DUMMY_DB.siswa[existingIdx] = {
-                                    ...DUMMY_DB.siswa[existingIdx],
-                                    nis: nis,
-                                    nama: nama,
-                                    jenis_kelamin: jk,
-                                    kelas: kelas
-                                };
-                                updated++;
-                            } else {
-                                skipped++;
-                            }
-                        } else {
-                            DUMMY_DB.siswa.push({
-                                id_siswa: "S" + (baseTime + idx) + Math.floor(Math.random() * 100),
-                                nis: nis,
-                                nama: nama,
-                                jenis_kelamin: jk,
-                                kelas: kelas
-                            });
-                            added++;
-                        }
-                    });
-
-                    return {
-                        success: true,
-                        added: added,
-                        updated: updated,
-                        skipped: skipped,
-                        message: `Import Massal Selesai!\n• Ditambahkan: ${added} siswa\n• Diperbarui: ${updated} siswa\n• Dilewati: ${skipped} siswa`
-                    };
-                }
-                case 'deleteSiswa_server': {
-                    DUMMY_DB.siswa = DUMMY_DB.siswa.filter(s => s.id_siswa !== args[0]);
-                    return { success: true, message: "Siswa berhasil dihapus." };
-                }
-                case 'getRekap_server': {
-                    const [bulan, kelas] = args;
-                    const rows = DUMMY_DB.absensi.filter(a => {
-                        const mB = (bulan === 'all') || (String(a.tanggal).substring(5, 7) === bulan);
-                        const mK = (!kelas) || (String(a.kelas) === String(kelas));
-                        return mB && mK;
-                    });
-                    return { absensi: rows, siswa: [...DUMMY_DB.siswa] };
-                }
-                case 'getPengaturan_server':
-                    return { ...DUMMY_DB.pengaturan };
-                case 'savePengaturan_server': {
-                    DUMMY_DB.pengaturan = JSON.parse(args[0]);
-                    return { success: true, message: "Pengaturan jam gerbang berhasil disimpan." };
-                }
-                case 'getUsers_server':
-                    return DUMMY_DB.users.map(u => ({ username: u.username, role: u.role, nama: u.nama }));
-                case 'saveUser_server': {
-                    const uObj = JSON.parse(args[0]);
-                    const idx = DUMMY_DB.users.findIndex(u => u.username.toLowerCase() === uObj.username.toLowerCase());
-                    if (idx >= 0) DUMMY_DB.users[idx] = uObj;
-                    else DUMMY_DB.users.push(uObj);
-                    return { success: true, message: "Akun pengguna berhasil disimpan." };
-                }
-                case 'deleteUser_server': {
-                    if (String(args[0]).toLowerCase() === 'admin') {
-                        return { success: false, message: "Akun Admin utama tidak dapat dihapus." };
-                    }
-                    DUMMY_DB.users = DUMMY_DB.users.filter(u => u.username !== args[0]);
-                    return { success: true, message: "Akun berhasil dihapus." };
-                }
-                case 'changeOwnPassword_server': {
-                    const [un, oldP, newP] = args;
-                    const usr = DUMMY_DB.users.find(u => u.username === un && u.password === oldP);
-                    if (!usr) return { success: false, message: "Password lama tidak sesuai!" };
-                    usr.password = newP;
-                    return { success: true, message: "Password berhasil diperbarui!" };
-                }
-                default:
-                    return { success: false, message: "Fungsi tidak ditemukan." };
-            }
+        
+        function saveSessionState_(user, token) {
+            try {
+                sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ user, token }));
+            } catch (e) {}
         }
 
+        function clearSessionState_() {
+            try {
+                sessionStorage.removeItem(SESSION_STORAGE_KEY);
+            } catch (e) {}
+        }
+
+        function applyUserSessionUI_(user) {
+            document.getElementById('badge-role-aktif').innerText = `Role: ${user.role}`;
+            document.getElementById('badge-role-aktif').className = user.role === 'Admin'
+                ? 'badge bg-danger border border-light'
+                : 'badge bg-success border border-light';
+
+            document.querySelectorAll('.admin-only').forEach(el => {
+                if (user.role === 'Admin') el.classList.remove('hidden');
+                else el.classList.add('hidden');
+            });
+
+            document.getElementById('page-login').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            const welcomeEl = document.getElementById('dash-welcome-name');
+            if (welcomeEl) welcomeEl.innerText = user.nama || user.role || 'Admin';
+        }
+ 		
         // =========================================================================
         // AUTENTIKASI & NAVIGASI
         // =========================================================================
@@ -3479,20 +3177,8 @@
                 if (res && res.success) {
                     STATE.user = res.user;
                     STATE.token = res.token || '';
-                    document.getElementById('badge-role-aktif').innerText = `Role: ${STATE.user.role}`;
-                    document.getElementById('badge-role-aktif').className = STATE.user.role === 'Admin'
-                        ? 'badge bg-danger border border-light'
-                        : 'badge bg-success border border-light';
-
-                    document.querySelectorAll('.admin-only').forEach(el => {
-                        if (STATE.user.role === 'Admin') el.classList.remove('hidden');
-                        else el.classList.add('hidden');
-                    });
-
-                    document.getElementById('page-login').classList.add('hidden');
-                    document.getElementById('main-app').classList.remove('hidden');
-					const welcomeEl = document.getElementById('dash-welcome-name');
-                    if (welcomeEl) welcomeEl.innerText = STATE.user.nama || STATE.user.role || 'Admin';
+                    saveSessionState_(STATE.user, STATE.token);
+                    applyUserSessionUI_(STATE.user);
                     navigate('dashboard');
                 } else {
                     customAlert(res && res.message ? res.message : "Login gagal! Periksa kembali Username dan Password.");
@@ -3502,10 +3188,10 @@
 
         function handleLogout() {
             customConfirm("Apakah Anda yakin ingin keluar dari aplikasi?", () => {
-                const tokenLama = STATE.token;
-                if (tokenLama) {
+                if (STATE.token) {
                     callBackend('logout_server', [], null, false);
                 }
+                clearSessionState_();
                 stopQRScanner();
                 document.body.classList.remove('kiosk-mode');
                 STATE.user = null;
@@ -4493,8 +4179,6 @@
             document.getElementById('info-jam-masuk').innerText = STATE.pengaturan.jam_masuk || "07:15";
             document.getElementById('info-jam-pulang').innerText = STATE.pengaturan.jam_pulang || "14:05";
             document.getElementById('info-cooldown').innerText = STATE.pengaturan.cooldown_menit || 5;
-
-            if (IS_PREVIEW) document.getElementById('preview-simulasi-panel').classList.remove('hidden');
 
             // Tidak memanggil getUserMedia()/getCameras() secara otomatis saat halaman baru dibuka
             if (STATE.availableCameras.length === 0) {
@@ -8467,26 +8151,43 @@
         // BOOTSTRAP APLIKASI SAAT DOM SIAP
         // =========================================================================
         document.addEventListener('DOMContentLoaded', () => {
+            // Terapkan konfigurasi White-Label
+            document.title = `${APP_CONFIG.APP_NAME} - ${APP_CONFIG.APP_SUBTITLE}`;
+            document.documentElement.style.setProperty('--primary-color', APP_CONFIG.THEME_COLOR);
+            const appNameEl = document.getElementById('login-app-name');
+            if (appNameEl) appNameEl.innerText = APP_CONFIG.APP_NAME;
+            const copyEl = document.getElementById('login-footer-copy');
+            if (copyEl) copyEl.innerHTML = `&copy; ${new Date().getFullYear()} ${escapeHTML(APP_CONFIG.APP_NAME)} &bull; ${escapeHTML(APP_CONFIG.APP_SUBTITLE)}`;
+
             initPWAManifestAndSW();
             updateOnlineStatus();
-			const urlParams = new URLSearchParams(window.location.search);
+
+            const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('portal') === 'siswa') {
                 initPortalSiswaMode();
                 return;
             }
 
             const modeBadge = document.getElementById('login-mode-badge');
-            if (IS_PREVIEW) {
-                document.getElementById('preview-badge-login').classList.remove('hidden');
-                if (modeBadge) {
-                    modeBadge.className = 'badge bg-warning bg-opacity-25 text-dark border border-warning rounded-pill px-3 py-1';
-                    modeBadge.innerHTML = '<i class="fas fa-flask me-1"></i> Mode Preview (Dummy)';
+            if (modeBadge && GAS_API_URL) {
+                modeBadge.className = 'badge bg-primary bg-opacity-10 text-primary border border-primary rounded-pill px-3 py-1';
+                modeBadge.innerHTML = '<i class="fas fa-cloud me-1"></i> Terhubung ke GAS API';
+            }
+
+            // Pulihkan sesi login jika halaman di-refresh (F5)
+            try {
+                const savedRaw = sessionStorage.getItem(SESSION_STORAGE_KEY);
+                if (savedRaw) {
+                    const saved = JSON.parse(savedRaw);
+                    if (saved && saved.user && saved.token) {
+                        STATE.user = saved.user;
+                        STATE.token = saved.token;
+                        applyUserSessionUI_(STATE.user);
+                        navigate('dashboard');
+                    }
                 }
-            } else if (GAS_API_URL) {
-                if (modeBadge) {
-                    modeBadge.className = 'badge bg-primary bg-opacity-10 text-primary border border-primary rounded-pill px-3 py-1';
-                    modeBadge.innerHTML = '<i class="fas fa-cloud me-1"></i> Terhubung ke GAS API';
-                }
+            } catch (e) {
+                clearSessionState_();
             }
 
             setInterval(() => {
