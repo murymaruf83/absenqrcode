@@ -3013,6 +3013,7 @@
 
         let STATE = {
             user: null,
+            token: "",
             siswa: [],
             absensiHariIni: [],
             izinKeluarHariIni: [],
@@ -3169,6 +3170,7 @@
                         },
                         body: JSON.stringify({
                             action: funcName,
+                            token: STATE.token || '',
                             args: argsArray || []
                         })
                     });
@@ -3184,13 +3186,17 @@
                     hideLoader();
                     if (json && json.ok === true) {
                         if (onSuccess) onSuccess(json.data);
+                    } else if (json && json.authError) {
+                        stopQRScanner();
+                        document.body.classList.remove('kiosk-mode');
+                        STATE.user = null;
+                        STATE.token = '';
+                        document.getElementById('main-app').classList.add('hidden');
+                        document.getElementById('page-login').classList.remove('hidden');
+                        customAlert(json.error || "Sesi login telah berakhir. Silakan login kembali.");
                     } else {
                         customAlert("Error Server:\n" + (json && json.error ? json.error : "Permintaan gagal diproses oleh server GAS."));
                     }
-                } catch (err) {
-                    hideLoader();
-                    customAlert("Gagal menghubungi Server GAS API:\n" + (err && err.message ? err.message : String(err)));
-                }
                 return;
             }
 
@@ -3458,6 +3464,7 @@
             callBackend('login_server', [u, p], (res) => {
                 if (res && res.success) {
                     STATE.user = res.user;
+                    STATE.token = res.token || '';
                     document.getElementById('badge-role-aktif').innerText = `Role: ${STATE.user.role}`;
                     document.getElementById('badge-role-aktif').className = STATE.user.role === 'Admin'
                         ? 'badge bg-danger border border-light'
@@ -3481,9 +3488,14 @@
 
         function handleLogout() {
             customConfirm("Apakah Anda yakin ingin keluar dari aplikasi?", () => {
+                const tokenLama = STATE.token;
+                if (tokenLama) {
+                    callBackend('logout_server', [], null, false);
+                }
                 stopQRScanner();
                 document.body.classList.remove('kiosk-mode');
                 STATE.user = null;
+                STATE.token = '';
                 document.getElementById('main-app').classList.add('hidden');
                 document.getElementById('page-login').classList.remove('hidden');
                 document.getElementById('login-password').value = '';
@@ -5492,6 +5504,7 @@
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({
                         action: 'deleteSiswa_server',
+                        token: STATE.token || '',
                         args: [idSiswa]
                     })
                 });
@@ -8433,17 +8446,13 @@
             document.getElementById('main-app').classList.add('hidden');
             document.getElementById('page-portal-siswa').classList.remove('hidden');
 
-            callBackend('getPengaturan_server', [], (cfg) => {
+            callBackend('getInfoSekolahPublik_server', [], (cfg) => {
                 if (cfg && cfg.nama_sekolah) {
-                    STATE.pengaturan = cfg;
+                    STATE.pengaturan.nama_sekolah = cfg.nama_sekolah;
                     const el = document.getElementById('portal-nama-sekolah');
                     if (el) el.innerText = `Portal Kehadiran — ${cfg.nama_sekolah}`;
                 }
             }, false);
-
-            callBackend('getSiswa_server', [], (data) => {
-                STATE.siswa = data || [];
-            }, "Menyiapkan Portal Siswa...");
         }
 
         function cekRaporPortalSiswa() {
@@ -8451,68 +8460,52 @@
             const periode = document.getElementById('portal-filter-periode').value;
             if (!nisInput) return customAlert("Masukkan NIS / NISN siswa terlebih dahulu.");
 
-            const cariDanMuat = () => {
-                const siswa = (STATE.siswa || []).find(s => String(s.nis || '').trim().toUpperCase() === nisInput);
-                if (!siswa) {
+            callBackend('getRaporPublik_server', [nisInput, periode], (res) => {
+                if (!res || !res.success) {
                     document.getElementById('portal-result-card').classList.add('hidden');
-                    return customAlert(`NIS / NISN "${nisInput}" tidak ditemukan.\nPastikan penulisan angka sudah benar.`);
+                    return customAlert(res && res.message ? res.message : "Data rapor tidak ditemukan.");
                 }
+                const s = res.siswa || {};
+                const rk = res.ringkasan || {};
+                const rincian = res.rincian || [];
 
-                callBackend('getRaporSiswa_server', [siswa.id_siswa, periode, ''], (res) => {
-                    if (!res || !res.success) {
-                        return customAlert(res && res.message ? res.message : "Gagal memuat rapor kehadiran.");
-                    }
-                    const s = res.siswa || siswa;
-                    const rk = res.ringkasan || {};
-                    const rincian = res.rincian || [];
+                document.getElementById('portal-result-card').classList.remove('hidden');
+                document.getElementById('portal-nis').innerText = s.nis || '-';
+                document.getElementById('portal-nama').innerText = s.nama || '-';
+                document.getElementById('portal-jk').innerText = s.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan';
+                document.getElementById('portal-kelas').innerText = s.kelas || '-';
+                document.getElementById('portal-periode-label').innerText = res.periode || periode;
 
-                    document.getElementById('portal-result-card').classList.remove('hidden');
-                    document.getElementById('portal-nis').innerText = s.nis || '-';
-                    document.getElementById('portal-nama').innerText = s.nama || '-';
-                    document.getElementById('portal-jk').innerText = s.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan';
-                    document.getElementById('portal-kelas').innerText = s.kelas || '-';
-                    document.getElementById('portal-periode-label').innerText = res.periode || periode;
+                document.getElementById('portal-h').innerText = rk.h || 0;
+                document.getElementById('portal-t').innerText = rk.t || 0;
+                document.getElementById('portal-i').innerText = rk.i || 0;
+                document.getElementById('portal-s').innerText = rk.s || 0;
+                document.getElementById('portal-a').innerText = rk.a || 0;
 
-                    document.getElementById('portal-h').innerText = rk.h || 0;
-                    document.getElementById('portal-t').innerText = rk.t || 0;
-                    document.getElementById('portal-i').innerText = rk.i || 0;
-                    document.getElementById('portal-s').innerText = rk.s || 0;
-                    document.getElementById('portal-a').innerText = rk.a || 0;
+                const persen = rk.persentase || 0;
+                const hadirTotal = (rk.h || 0) + (rk.t || 0);
+                const totalHari = rk.totalTercatat || 0;
+                document.getElementById('portal-persen').innerText = `${persen}%`;
+                document.getElementById('portal-persen-detail').innerText = `${persen}% (${hadirTotal} / ${totalHari} hari tercatat)`;
 
-                    const persen = rk.persentase || 0;
-                    const hadirTotal = (rk.h || 0) + (rk.t || 0);
-                    const totalHari = rk.totalTercatat || 0;
-                    document.getElementById('portal-persen').innerText = `${persen}%`;
-                    document.getElementById('portal-persen-detail').innerText = `${persen}% (${hadirTotal} / ${totalHari} hari tercatat)`;
+                const bar = document.getElementById('portal-persen-bar');
+                bar.style.width = `${Math.min(100, Math.max(0, persen))}%`;
+                bar.className = persen >= 85 ? 'progress-bar bg-success' : (persen >= 70 ? 'progress-bar bg-warning' : 'progress-bar bg-danger');
 
-                    const bar = document.getElementById('portal-persen-bar');
-                    bar.style.width = `${Math.min(100, Math.max(0, persen))}%`;
-                    bar.className = persen >= 85 ? 'progress-bar bg-success' : (persen >= 70 ? 'progress-bar bg-warning' : 'progress-bar bg-danger');
-
-                    const tb = document.getElementById('tbody-portal-rincian');
-                    if (rincian.length === 0) {
-                        tb.innerHTML = '<tr><td colspan="5" class="text-success fw-semibold py-3"><i class="fas fa-check-circle me-1"></i> Tidak ada catatan ketidakhadiran atau izin pada periode ini.</td></tr>';
-                    } else {
-                        tb.innerHTML = rincian.map((r, idx) => `
-                            <tr>
-                                <td>${idx + 1}</td>
-                                <td class="fw-semibold">${escapeHTML(formatTanggalIndo(r.tanggal))}</td>
-                                <td>${getRaporKategoriBadge(r.kode, r.kategori)}</td>
-                                <td class="small fw-semibold">${escapeHTML(r.waktu || '-')}</td>
-                                <td class="text-start small">${escapeHTML(r.keterangan || '-')}</td>
-                            </tr>`).join('');
-                    }
-                }, "Mengambil Rapor Kehadiran...");
-            };
-
-            if (!STATE.siswa || STATE.siswa.length === 0) {
-                callBackend('getSiswa_server', [], (data) => {
-                    STATE.siswa = data || [];
-                    cariDanMuat();
-                }, "Memuat Data Siswa...");
-            } else {
-                cariDanMuat();
-            }
+                const tb = document.getElementById('tbody-portal-rincian');
+                if (rincian.length === 0) {
+                    tb.innerHTML = '<tr><td colspan="5" class="text-success fw-semibold py-3"><i class="fas fa-check-circle me-1"></i> Tidak ada catatan ketidakhadiran atau izin pada periode ini.</td></tr>';
+                } else {
+                    tb.innerHTML = rincian.map((r, idx) => `
+                        <tr>
+                            <td>${idx + 1}</td>
+                            <td class="fw-semibold">${escapeHTML(formatTanggalIndo(r.tanggal))}</td>
+                            <td>${getRaporKategoriBadge(r.kode, r.kategori)}</td>
+                            <td class="small fw-semibold">${escapeHTML(r.waktu || '-')}</td>
+                            <td class="text-start small">${escapeHTML(r.keterangan || '-')}</td>
+                        </tr>`).join('');
+                }
+            }, "Mengambil Rapor Kehadiran...");
         }
 		
         // =========================================================================
