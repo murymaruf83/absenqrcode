@@ -1231,7 +1231,16 @@
                     </div>
                 </div>
 
-                <!-- Panel Simulasi Waktu (Hanya Tampil di Mode Preview) -->
+                <!-- Banner Antrean Scan Offline (Otomatis Tampil Jika Ada Data Tertunda) -->
+                <div id="offline-queue-banner" class="alert alert-warning py-2 px-3 mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2 hidden">
+                    <div class="small fw-semibold">
+                        <i class="fas fa-cloud-upload-alt me-1"></i>
+                        <span id="offline-queue-text">0 data scan tersimpan offline menunggu koneksi.</span>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-dark fw-bold" onclick="syncOfflineQueueNow(true)">
+                        <i class="fas fa-sync-alt me-1"></i> Sinkronkan Sekarang
+                    </button>
+                </div>
                 
                 <div class="row g-3">
                     <!-- Panel Kiri: Pemindai Kamera, Foto QR & USB Scanner -->
@@ -1405,6 +1414,9 @@
                             </button>
                             <button class="btn btn-sm btn-success fw-bold admin-only" onclick="openModalImportSiswa()">
                                 <i class="fas fa-file-excel me-1"></i> Import Excel/CSV
+                            </button>
+							<button class="btn btn-sm btn-warning text-dark fw-bold admin-only" onclick="openModalNaikKelas()">
+                                <i class="fas fa-level-up-alt me-1"></i> Kenaikan Kelas
                             </button>
                             <button class="btn btn-sm btn-primary fw-bold admin-only" onclick="openModalSiswa()">
                                 <i class="fas fa-plus me-1"></i> Tambah Siswa
@@ -2595,7 +2607,47 @@
             </div>
         </div>
     </div>
-
+    
+	<!-- Modal Kenaikan Kelas Massal (Admin Only) -->
+    <div class="modal fade" id="modalNaikKelas" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-level-up-alt me-2"></i> Kenaikan Kelas / Kelulusan Massal</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <form onsubmit="event.preventDefault(); prosesNaikKelasMassal();">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="nk-kelas-asal" class="form-label small fw-bold">Pilih Kelas Asal</label>
+                            <select id="nk-kelas-asal" class="form-select border-primary fw-semibold" required>
+                                <option value="">-- Pilih Kelas --</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="nk-mode-aksi" class="form-label small fw-bold">Jenis Tindakan</label>
+                            <select id="nk-mode-aksi" class="form-select border-primary fw-semibold" onchange="toggleInputKelasTujuan()">
+                                <option value="pindah">Naik / Pindah ke Kelas Baru</option>
+                                <option value="lulus_hapus">Luluskan &amp; Hapus dari Daftar Siswa Aktif</option>
+                            </select>
+                        </div>
+                        <div class="mb-2" id="wrap-nk-tujuan">
+                            <label for="nk-kelas-tujuan" class="form-label small fw-bold">Nama Kelas Tujuan</label>
+                            <input type="text" id="nk-kelas-tujuan" class="form-control border-primary fw-bold" placeholder="Contoh: XI-1 atau 8A">
+                            <small class="text-muted">Seluruh siswa di kelas asal akan otomatis pindah ke kelas ini.</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-warning text-dark fw-bold">
+                            <i class="fas fa-check-circle me-1"></i> Proses Sekarang
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+	
     <!-- Modal Tambah / Edit Siswa -->
     <div class="modal fade" id="modalSiswa" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
@@ -3256,6 +3308,7 @@
 
             callBackend('getInitialData_server', [tgl], (res) => {
                 STATE.siswa = res.siswa || [];
+                cacheSiswaLocally_(STATE.siswa); // <-- TAMBAHAN
                 STATE.absensiHariIni = res.absensi || [];
                 STATE.izinKeluarHariIni = res.izinKeluar || [];
                 STATE.pengaturan = res.pengaturan || STATE.pengaturan;
@@ -4179,6 +4232,7 @@
             document.getElementById('info-jam-masuk').innerText = STATE.pengaturan.jam_masuk || "07:15";
             document.getElementById('info-jam-pulang').innerText = STATE.pengaturan.jam_pulang || "14:05";
             document.getElementById('info-cooldown').innerText = STATE.pengaturan.cooldown_menit || 5;
+            updateOfflineQueueBanner_(); // <-- TAMBAHAN 1
 
             // Tidak memanggil getUserMedia()/getCameras() secara otomatis saat halaman baru dibuka
             if (STATE.availableCameras.length === 0) {
@@ -4188,6 +4242,7 @@
 
             callBackend('getInitialData_server', [getTodayStr()], (res) => {
                 STATE.siswa = res.siswa || [];
+                cacheSiswaLocally_(STATE.siswa); // <-- TAMBAHAN 2
                 STATE.absensiHariIni = res.absensi || [];
                 STATE.pengaturan = res.pengaturan || STATE.pengaturan;
                 document.getElementById('scan-nama-sekolah').innerText = STATE.pengaturan.nama_sekolah;
@@ -4487,6 +4542,73 @@
         function triggerDemoScan(nis) {
             onQRCodeDetected(nis, true);
         }
+		
+		const OFFLINE_QUEUE_KEY = "absensi_qr_offline_queue_v1";
+        const SISWA_CACHE_KEY = "absensi_qr_siswa_cache_v1";
+
+        function getOfflineQueue_() {
+            try { return JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]'); }
+            catch (e) { return []; }
+        }
+
+        function saveOfflineQueue_(arr) {
+            try { localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(arr || [])); }
+            catch (e) {}
+            updateOfflineQueueBanner_();
+        }
+
+        function cacheSiswaLocally_(list) {
+            if (Array.isArray(list) && list.length > 0) {
+                try { localStorage.setItem(SISWA_CACHE_KEY, JSON.stringify(list)); } catch (e) {}
+            }
+        }
+
+        function getCachedSiswaList_() {
+            if (STATE.siswa && STATE.siswa.length > 0) return STATE.siswa;
+            try { return JSON.parse(localStorage.getItem(SISWA_CACHE_KEY) || '[]'); }
+            catch (e) { return []; }
+        }
+
+        function updateOfflineQueueBanner_() {
+            const q = getOfflineQueue_();
+            const banner = document.getElementById('offline-queue-banner');
+            const textEl = document.getElementById('offline-queue-text');
+            if (!banner || !textEl) return;
+            if (q.length > 0) {
+                textEl.innerText = `${q.length} data scan tersimpan offline dan menunggu sinkronisasi ke server.`;
+                banner.classList.remove('hidden');
+            } else {
+                banner.classList.add('hidden');
+            }
+        }
+
+        function syncOfflineQueueNow(manualTrigger = false) {
+            const q = getOfflineQueue_();
+            if (q.length === 0) {
+                if (manualTrigger) customAlert("Tidak ada antrean scan offline yang perlu disinkronkan.");
+                return;
+            }
+            if (!navigator.onLine) {
+                if (manualTrigger) customAlert("Perangkat masih offline. Sambungkan internet terlebih dahulu.");
+                return;
+            }
+            if (!STATE.token) return;
+
+            callBackend('syncOfflineScanBatch_server', [JSON.stringify(q)], (res) => {
+                if (res && res.success) {
+                    saveOfflineQueue_([]);
+                    refreshRecentScanSilent();
+                    if (manualTrigger) customAlert(res.message);
+                } else if (manualTrigger) {
+                    customAlert(res && res.message ? res.message : "Gagal menyinkronkan antrean offline.");
+                }
+            }, manualTrigger ? `Menyinkronkan ${q.length} Data Offline...` : false);
+        }
+
+        window.addEventListener('online', () => {
+            updateOnlineStatus();
+            setTimeout(() => syncOfflineQueueNow(false), 1500);
+        });
 
         function onQRCodeDetected(decodedText, bypassDebounce = false) {
             const nis = String(decodedText || '').trim();
@@ -4499,6 +4621,45 @@
             STATE.lastScanText = nis;
             STATE.lastScanTimestamp = now;
             STATE.isProcessingScan = true;
+
+            // Mode Offline: simpan ke antrean localStorage & tampilkan dari cache siswa
+            if (!navigator.onLine) {
+                const jamLokal = getCurrentTimeStr();
+                const tglLokal = getTodayStr();
+                const listCache = getCachedSiswaList_();
+                const siswa = listCache.find(s => String(s.nis || '').trim().toUpperCase() === nis.toUpperCase());
+
+                if (!siswa) {
+                    STATE.isProcessingScan = false;
+                    playBeep('error');
+                    return renderDisplayPanel({
+                        stateClass: 'state-error',
+                        badgeClass: 'bg-danger',
+                        badgeText: 'OFFLINE - NIS TIDAK DIKENAL',
+                        bannerClass: 'alert-danger',
+                        message: `Mode Offline: NIS "${nis}" tidak ditemukan di cache perangkat.`,
+                        jamScan: jamLokal,
+                        siswa: { nis: nis, nama: 'Tidak Dikenal', jenis_kelamin: '-', kelas: '-' },
+                        record: null
+                    });
+                }
+
+                const q = getOfflineQueue_();
+                q.push({ nis: siswa.nis, tanggal: tglLokal, jam: jamLokal });
+                saveOfflineQueue_(q);
+                STATE.isProcessingScan = false;
+                playBeep('warning');
+                return renderDisplayPanel({
+                    stateClass: 'state-warning',
+                    badgeClass: 'bg-warning text-dark',
+                    badgeText: 'TERSIMPAN OFFLINE',
+                    bannerClass: 'alert-warning',
+                    message: `Jaringan putus! Presensi pukul ${jamLokal} disimpan di perangkat (${q.length} antrean) dan otomatis terkirim saat online.`,
+                    jamScan: jamLokal,
+                    siswa: siswa,
+                    record: { jam_masuk: jamLokal, jam_pulang: '' }
+                });
+            }
 
             callBackend('prosesScanQR_server', [nis], (res) => {
                 STATE.isProcessingScan = false;
@@ -5222,6 +5383,53 @@
                     }, `Menghapus ${labelKls} (${targetList.length} siswa)...`);
                 }
             );
+        }
+		
+		function openModalNaikKelas() {
+            const daftarKelas = getDaftarKelasTerurut();
+            const sel = document.getElementById('nk-kelas-asal');
+            sel.innerHTML = '<option value="">-- Pilih Kelas Asal --</option>' +
+                daftarKelas.map(k => `<option value="${escapeHTML(k)}">${escapeHTML(formatLabelKelas(k))}</option>`).join('');
+            document.getElementById('nk-mode-aksi').value = 'pindah';
+            document.getElementById('nk-kelas-tujuan').value = '';
+            toggleInputKelasTujuan();
+            new bootstrap.Modal(document.getElementById('modalNaikKelas')).show();
+        }
+
+        function toggleInputKelasTujuan() {
+            const mode = document.getElementById('nk-mode-aksi').value;
+            const wrap = document.getElementById('wrap-nk-tujuan');
+            const inp = document.getElementById('nk-kelas-tujuan');
+            if (mode === 'lulus_hapus') {
+                wrap.classList.add('hidden');
+                inp.required = false;
+            } else {
+                wrap.classList.remove('hidden');
+                inp.required = true;
+            }
+        }
+
+        function prosesNaikKelasMassal() {
+            const asal = document.getElementById('nk-kelas-asal').value;
+            const mode = document.getElementById('nk-mode-aksi').value;
+            const tujuan = document.getElementById('nk-kelas-tujuan').value.trim();
+
+            const pesanKonfirmasi = mode === 'lulus_hapus'
+                ? `Luluskan & HAPUS PERMANEN seluruh siswa dari Kelas ${asal}?`
+                : `Pindahkan seluruh siswa dari Kelas ${asal} ke Kelas ${tujuan}?`;
+
+            customConfirm(pesanKonfirmasi, () => {
+                callBackend('naikKelasMassal_server', [asal, tujuan, mode], (res) => {
+                    if (res && res.success) {
+                        const inst = bootstrap.Modal.getInstance(document.getElementById('modalNaikKelas'));
+                        if (inst) inst.hide();
+                        loadSiswaData();
+                        customAlert(res.message);
+                    } else {
+                        customAlert(res && res.message ? res.message : "Gagal memproses kenaikan kelas.");
+                    }
+                }, "Memproses Kenaikan Kelas Massal...");
+            });
         }
 		
         // --- FITUR IMPORT EXCEL / CSV MASSAL ---
@@ -7090,56 +7298,19 @@
             if (typeof Chart === 'undefined') {
                 return customAlert("Pustaka Chart.js belum termuat. Periksa koneksi internet lalu muat ulang halaman.");
             }
-
             const periodeVal = document.getElementById('grafik-filter-periode').value;
             const tglEl = document.getElementById('grafik-filter-tanggal');
             const tgl = tglEl ? tglEl.value : '';
 
-            let apiBulan = 'all';
-            if (tgl && tgl.length >= 7) {
-                apiBulan = tgl.substring(5, 7);
-            } else if (/^\d{2}$/.test(periodeVal)) {
-                apiBulan = periodeVal;
-            }
+            callBackend('getGrafikSummary_server', [periodeVal, tgl], (res) => {
+                if (!res) return;
+                GRAFIK_STATE.periodeCode = res.periodeCode || periodeVal;
+                GRAFIK_STATE.periodeLabel = res.periodeLabel || '';
+                GRAFIK_STATE.isSingleDate = !!res.isSingleDate;
+                GRAFIK_STATE.isModeBulan = !!res.isModeBulan;
+                GRAFIK_STATE.perKelas = res.perKelas || [];
+                GRAFIK_STATE.trenMap = res.trenMap || {};
 
-            callBackend('getRekap_server', [apiBulan, ''], (res) => {
-                let rows = (res && res.absensi) ? res.absensi : [];
-                if (res && Array.isArray(res.siswa) && res.siswa.length > 0) {
-                    STATE.siswa = res.siswa;
-                }
-
-                if (tgl) {
-                    rows = rows.filter(r => String(r.tanggal || '').trim() === tgl);
-                    GRAFIK_STATE.periodeCode = 'tgl';
-                    GRAFIK_STATE.periodeLabel = `Tanggal ${formatTanggalIndo(tgl)}`;
-                    GRAFIK_STATE.isSingleDate = true;
-                } else if (periodeVal === 'sem1') {
-                    rows = rows.filter(r => {
-                        const m = parseInt(String(r.tanggal || '').substring(5, 7), 10);
-                        return m >= 7 && m <= 12;
-                    });
-                    GRAFIK_STATE.periodeCode = 'sem1';
-                    GRAFIK_STATE.periodeLabel = 'Semester 1 (Juli - Desember)';
-                    GRAFIK_STATE.isSingleDate = false;
-                } else if (periodeVal === 'sem2') {
-                    rows = rows.filter(r => {
-                        const m = parseInt(String(r.tanggal || '').substring(5, 7), 10);
-                        return m >= 1 && m <= 6;
-                    });
-                    GRAFIK_STATE.periodeCode = 'sem2';
-                    GRAFIK_STATE.periodeLabel = 'Semester 2 (Januari - Juni)';
-                    GRAFIK_STATE.isSingleDate = false;
-                } else if (periodeVal === 'all') {
-                    GRAFIK_STATE.periodeCode = 'all';
-                    GRAFIK_STATE.periodeLabel = '1 Tahun Penuh (Januari - Desember)';
-                    GRAFIK_STATE.isSingleDate = false;
-                } else {
-                    GRAFIK_STATE.periodeCode = periodeVal;
-                    GRAFIK_STATE.periodeLabel = `Bulan ${NAMA_BULAN_MAP[periodeVal] || periodeVal}`;
-                    GRAFIK_STATE.isSingleDate = false;
-                }
-
-                GRAFIK_STATE.rows = rows;
                 populateGrafikTingkatDropdown();
                 renderGrafikStatistikUI();
             }, "Menyusun Grafik Statistik...");
@@ -7164,13 +7335,27 @@
                     : GRAFIK_STATE.periodeLabel;
             }
 
-            // Saring baris absensi sesuai filter tingkat
-            const filteredRows = filterTingkat
-                ? (GRAFIK_STATE.rows || []).filter(r => getTingkatKelas(r.kelas) === filterTingkat)
-                : (GRAFIK_STATE.rows || []);
+            let perKelasStats = (GRAFIK_STATE.perKelas || [])
+                .filter(x => !filterTingkat || getTingkatKelas(x.kelas) === filterTingkat)
+                .map(x => {
+                    const total = x.h + x.t + x.i + x.s + x.a;
+                    const persen = total > 0 ? Number((((x.h + x.t) / total) * 100).toFixed(1)) : 0;
+                    return { ...x, label: formatLabelKelas(x.kelas), total, persen };
+                })
+                .sort((a, b) => {
+                    const oa = getUrutanTingkat(getTingkatKelas(a.kelas));
+                    const ob = getUrutanTingkat(getTingkatKelas(b.kelas));
+                    if (oa !== ob) return oa - ob;
+                    return a.kelas.localeCompare(b.kelas, 'id', { numeric: true, sensitivity: 'base' });
+                });
 
-            // Hitung ringkasan KPI atas
-            const tot = hitungHTISAStats(filteredRows);
+            const tot = perKelasStats.reduce((acc, x) => {
+                acc.h += x.h; acc.t += x.t; acc.i += x.i; acc.s += x.s; acc.a += x.a;
+                return acc;
+            }, { h: 0, t: 0, i: 0, s: 0, a: 0 });
+            tot.total = tot.h + tot.t + tot.i + tot.s + tot.a;
+            tot.persen = tot.total > 0 ? Number((((tot.h + tot.t) / tot.total) * 100).toFixed(1)) : 0;
+
             document.getElementById('grafik-sum-h').innerText = tot.h;
             document.getElementById('grafik-sum-t').innerText = tot.t;
             document.getElementById('grafik-sum-i').innerText = tot.i;
@@ -7178,33 +7363,8 @@
             document.getElementById('grafik-sum-a').innerText = tot.a;
             document.getElementById('grafik-sum-persen').innerText = `${tot.persen}%`;
 
-            // Kumpulkan daftar kelas (gabungan dari master siswa & data absensi) lalu urutkan dinamis
-            const kelasSet = new Set(getDaftarKelasTerurut());
-            filteredRows.forEach(r => {
-                const k = String(r.kelas || '').trim();
-                if (k) kelasSet.add(k);
-            });
-
-            let daftarKelas = [...kelasSet].sort((a, b) => {
-                const oa = getUrutanTingkat(getTingkatKelas(a));
-                const ob = getUrutanTingkat(getTingkatKelas(b));
-                if (oa !== ob) return oa - ob;
-                return a.localeCompare(b, 'id', { numeric: true, sensitivity: 'base' });
-            });
-            if (filterTingkat) {
-                daftarKelas = daftarKelas.filter(k => getTingkatKelas(k) === filterTingkat);
-            }
-
             const badgeJml = document.getElementById('grafik-badge-jml-kelas');
-            if (badgeJml) badgeJml.innerText = `${daftarKelas.length} Kelas`;
-
-            // Hitung agregasi H, T, I, S, A & % per kelas
-            const perKelasStats = daftarKelas.map(kls => {
-                const subset = filteredRows.filter(r => String(r.kelas || '').trim() === kls);
-                const st = hitungHTISAStats(subset);
-                return { kelas: kls, label: formatLabelKelas(kls), ...st };
-            });
-
+            if (badgeJml) badgeJml.innerText = `${perKelasStats.length} Kelas`;
             const labelsKelas = perKelasStats.map(x => x.label);
 
             // 1. GRAFIK KOMPOSISI H, T, I, S, A PER KELAS (STACKED BAR)
@@ -7339,41 +7499,40 @@
             }
             if (trenWrap) trenWrap.classList.remove('hidden');
 
-            const isModeBulan = ['sem1', 'sem2', 'all'].includes(GRAFIK_STATE.periodeCode);
+            const isModeBulan = !!GRAFIK_STATE.isModeBulan;
+            const trenMap = GRAFIK_STATE.trenMap || {};
             const trenLabels = [];
             const trenPersen = [];
 
+            const hitungPersenTren = (entry) => {
+                if (!entry) return 0;
+                if (!filterTingkat) return entry.total > 0 ? Number(((entry.h / entry.total) * 100).toFixed(1)) : 0;
+                let hT = 0, totT = 0;
+                Object.keys(entry.kelas || {}).forEach(k => {
+                    if (getTingkatKelas(k) === filterTingkat) {
+                        hT += entry.kelas[k].h;
+                        totT += entry.kelas[k].total;
+                    }
+                });
+                return totT > 0 ? Number(((hT / totT) * 100).toFixed(1)) : 0;
+            };
+
             if (isModeBulan) {
-                if (trenTitle) {
-                    trenTitle.innerHTML = `<i class="fas fa-chart-line text-primary me-2"></i> Tren Persentase Kehadiran per Bulan (${escapeHTML(GRAFIK_STATE.periodeLabel)})`;
-                }
+                if (trenTitle) trenTitle.innerHTML = `<i class="fas fa-chart-line text-primary me-2"></i> Tren Persentase Kehadiran per Bulan (${escapeHTML(GRAFIK_STATE.periodeLabel)})`;
                 const daftarBulan = GRAFIK_STATE.periodeCode === 'sem1'
                     ? ['07', '08', '09', '10', '11', '12']
                     : (GRAFIK_STATE.periodeCode === 'sem2'
                         ? ['01', '02', '03', '04', '05', '06']
                         : ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12']);
-
                 daftarBulan.forEach(mm => {
-                    const subset = filteredRows.filter(r => String(r.tanggal || '').substring(5, 7) === mm);
-                    const st = hitungHTISAStats(subset);
                     trenLabels.push(NAMA_BULAN_MAP[mm] || mm);
-                    trenPersen.push(st.persen);
+                    trenPersen.push(hitungPersenTren(trenMap[mm]));
                 });
             } else {
-                if (trenTitle) {
-                    trenTitle.innerHTML = `<i class="fas fa-chart-line text-primary me-2"></i> Tren Persentase Kehadiran Harian (${escapeHTML(GRAFIK_STATE.periodeLabel)})`;
-                }
-                const mapTgl = {};
-                filteredRows.forEach(r => {
-                    const tglKey = String(r.tanggal || '').trim();
-                    if (!tglKey) return;
-                    if (!mapTgl[tglKey]) mapTgl[tglKey] = [];
-                    mapTgl[tglKey].push(r);
-                });
-                Object.keys(mapTgl).sort().forEach(tglKey => {
-                    const st = hitungHTISAStats(mapTgl[tglKey]);
+                if (trenTitle) trenTitle.innerHTML = `<i class="fas fa-chart-line text-primary me-2"></i> Tren Persentase Kehadiran Harian (${escapeHTML(GRAFIK_STATE.periodeLabel)})`;
+                Object.keys(trenMap).sort().forEach(tglKey => {
                     trenLabels.push(formatTanggalIndo(tglKey));
-                    trenPersen.push(st.persen);
+                    trenPersen.push(hitungPersenTren(trenMap[tglKey]));
                 });
             }
 
